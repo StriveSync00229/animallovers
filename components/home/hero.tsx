@@ -96,7 +96,7 @@ const Hero = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
-              className="text-5xl font-bold tracking-tight text-gray-900 md:text-6xl lg:text-7xl leading-tight"
+              className="text-5xl font-bold tracking-tight text-gray-900 md:text-6xl lg:text-7xl leading-snug"
             >
               Donnez une{" "}
               <span className="relative">
@@ -107,7 +107,7 @@ const Hero = () => {
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
                   transition={{ duration: 0.8, delay: 1 }}
-                  className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-orange-500 rounded-full"
+                  className="absolute left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-orange-500 rounded-full"
                 />
               </span>{" "}
               à nos amis à quatre pattes
@@ -146,10 +146,7 @@ const Hero = () => {
                 size="lg"
                 className="group border-2 border-rose-300 hover:border-rose-500 hover:bg-rose-50 shadow-lg hover:shadow-xl transition-all duration-300 bg-transparent"
               >
-                <Link href="/faire-un-don" className="flex items-center">
-                  <Heart className="w-5 h-5 mr-2 group-hover:text-rose-500 group-hover:animate-pulse" />
-                  Faire un don
-                </Link>
+                <Link href="/faire-un-don" className="flex items-center">Faire un don</Link>
               </Button>
             </motion.div>
 
@@ -158,7 +155,7 @@ const Hero = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.9 }}
-              className="grid grid-cols-3 gap-6 pt-8"
+              className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-8"
             >
               {[
                 { number: "2,500+", label: "Animaux sauvés" },

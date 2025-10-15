@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { DollarSign, Heart, Shield, Users } from "lucide-react"
+import { Heart, Shield, Users } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -47,10 +47,7 @@ const DonationSection = () => {
 
             <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-4 pt-4">
               <Button asChild size="lg" className="bg-rose-500 hover:bg-rose-600">
-                <Link href="/faire-un-don">
-                  <DollarSign className="w-5 h-5 mr-2" />
-                  Faire un don
-                </Link>
+                <Link href="/faire-un-don">Faire un don</Link>
               </Button>
             </div>
           </motion.div>

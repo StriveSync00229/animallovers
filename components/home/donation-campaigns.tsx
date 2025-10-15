@@ -140,14 +140,13 @@ export default function DonationCampaigns() {
 
                     <div className="flex gap-2">
                       <Button asChild className="flex-1 bg-purple-500 hover:bg-purple-600">
-                        <Link href="/faire-un-don">
-                          <Heart className="w-4 h-4 mr-2" />
-                          Faire un don
-                        </Link>
+                        <Link href="/faire-un-don">Faire un don</Link>
                       </Button>
-                      <Button variant="outline" className="flex-1 bg-transparent">
-                        <Target className="w-4 h-4 mr-2" />
-                        En savoir plus
+                      <Button asChild variant="outline" className="flex-1 bg-transparent">
+                        <Link href={`/campagnes/${campaign.id}`}>
+                          <Target className="w-4 h-4 mr-2" />
+                          En savoir plus
+                        </Link>
                       </Button>
                     </div>
                   </div>
@@ -159,7 +158,7 @@ export default function DonationCampaigns() {
 
         <div className="text-center mt-12">
           <Button asChild size="lg" className="bg-purple-500 hover:bg-purple-600">
-            <Link href="/faire-un-don">
+            <Link href="/campagnes">
               <Heart className="w-5 h-5 mr-2" />
               Voir toutes les campagnes
             </Link>

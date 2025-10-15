@@ -3,33 +3,13 @@
 import { motion } from "framer-motion"
 import Image from "next/image"
 
-// Données fictives pour les partenaires
+// Partenaires & soutiens - utilisez des logos réels placés dans /public/partners
 const partners = [
-  {
-    id: 1,
-    name: "Refuge des Pattes",
-    logo: "https://images.unsplash.com/photo-1603302576837-37561b2e2302?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-  },
-  {
-    id: 2,
-    name: "Association Féline",
-    logo: "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-  },
-  {
-    id: 3,
-    name: "Clinique Vétérinaire du Centre",
-    logo: "https://images.unsplash.com/photo-1516876437184-593fda40c7ce?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-  },
-  {
-    id: 4,
-    name: "PetFood Premium",
-    logo: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-  },
-  {
-    id: 5,
-    name: "Fondation Animaux",
-    logo: "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80",
-  },
+  { id: 1, name: "SPA", logo: "/partners/spa.svg" },
+  { id: 2, name: "WWF", logo: "/partners/wwf.svg" },
+  { id: 3, name: "Royal Canin", logo: "/partners/royal-canin.svg" },
+  { id: 4, name: "Purina", logo: "/partners/purina.svg" },
+  { id: 5, name: "Fondation Brigitte Bardot", logo: "/partners/fbb.svg" },
 ]
 
 const PartnersSection = () => {
@@ -59,8 +39,8 @@ const PartnersSection = () => {
         >
           {partners.map((partner) => (
             <div key={partner.id} className="flex flex-col items-center p-6 bg-white rounded-lg shadow-sm">
-              <div className="relative w-24 h-24 mb-4">
-                <Image src={partner.logo || "/placeholder.svg"} alt={partner.name} fill className="object-contain" />
+              <div className="relative w-28 h-14 mb-4 grayscale hover:grayscale-0 transition">
+                <Image src={partner.logo} alt={partner.name} fill className="object-contain" draggable={false} />
               </div>
               <h3 className="text-center text-sm font-medium text-gray-900">{partner.name}</h3>
             </div>

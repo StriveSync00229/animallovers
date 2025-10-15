@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Menu, X, Heart, ShoppingBag, BookOpen, DollarSign, ChevronDown, Cat, Dog, MessageCircle } from "lucide-react"
+import { Menu, X, Heart, ShoppingBag, BookOpen, ChevronDown, Cat, Dog, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -25,7 +25,7 @@ const Header = () => {
     { name: "Accueil", href: "/" },
     { name: "À propos", href: "/a-propos" },
     { name: "Dressage & Santé", href: "/dressage-sante", icon: <BookOpen className="w-4 h-4 mr-1" /> },
-    { name: "Faire un don", href: "/faire-un-don", icon: <DollarSign className="w-4 h-4 mr-1" /> },
+    { name: "Faire un don", href: "/faire-un-don" },
   ]
 
   return (
@@ -33,7 +33,7 @@ const Header = () => {
       <div className="container flex items-center justify-between h-16 px-4 mx-auto">
         <Link href="/" className="flex items-center space-x-2">
           <Heart className="w-8 h-8 text-rose-500" />
-          <span className="text-xl font-bold">AnimalLovers</span>
+          <span className="logo-text text-xl font-bold">AnimalLovers</span>
         </Link>
 
         {/* Navigation desktop */}

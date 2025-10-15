@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { motion, useAnimation } from "framer-motion"
 import { useInView } from "react-intersection-observer"
-import { PawPrint, Heart, BookOpen, DollarSign } from "lucide-react"
+import { PawPrint, Heart, BookOpen, HandHeart } from "lucide-react"
 
 const impactData = [
   {
@@ -13,7 +13,7 @@ const impactData = [
     suffix: "+",
   },
   {
-    icon: <DollarSign className="w-8 h-8 text-[#4a6741]" />,
+    icon: <HandHeart className="w-8 h-8 text-[#4a6741]" />,
     title: "Dons collectés",
     value: 75000,
     prefix: "€",

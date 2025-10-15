@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { HelpCircle, ArrowRight, CheckCircle, DollarSign } from "lucide-react"
+import { HelpCircle, ArrowRight, CheckCircle } from "lucide-react"
 import Link from "next/link"
 
 interface QuizQuestion {
@@ -177,10 +177,7 @@ const TrainingQuiz = () => {
                   Commencer le quiz
                 </Button>
                 <Button asChild variant="outline" className="border-rose-500 text-rose-500 hover:bg-rose-50">
-                  <Link href="/faire-un-don">
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Faire un don
-                  </Link>
+                  <Link href="/faire-un-don">Faire un don</Link>
                 </Button>
               </div>
             </motion.div>

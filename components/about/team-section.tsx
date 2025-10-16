@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 // Données fictives pour l'équipe
@@ -34,15 +35,6 @@ const teamMembers = [
     quote: "L'éducation est la clé pour une relation harmonieuse entre l'humain et l'animal.",
     image:
       "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 4,
-    name: "Lucas Bernard",
-    role: "Responsable technique",
-    bio: "Développeur web et amoureux des chats, Lucas veille au bon fonctionnement de la plateforme.",
-    quote: "La technologie doit servir des causes qui nous tiennent à cœur.",
-    image:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
   },
 ]
 
@@ -112,9 +104,15 @@ const TeamSection = () => {
                   key={member.id}
                   className="flex flex-col items-center p-6 text-center bg-[#f8f5f0] rounded-lg shadow-sm"
                 >
-                  <div className="relative w-32 h-32 mb-4 overflow-hidden rounded-full">
-                    <Image src={member.image || "/placeholder.svg"} alt={member.name} fill className="object-cover" />
-                  </div>
+                  <Avatar className="h-28 w-28 mb-4 ring-2 ring-[#4a6741]/20 shadow-md">
+                    <AvatarImage src={member.image} alt={member.name} />
+                    <AvatarFallback className="text-lg font-semibold">
+                      {member.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
                   <h3 className="mb-1 text-xl font-semibold text-gray-900">{member.name}</h3>
                   <p className="mb-3 text-sm font-medium text-[#4a6741]">{member.role}</p>
                   <p className="mb-4 text-sm text-gray-600">{member.bio}</p>

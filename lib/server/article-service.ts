@@ -2,6 +2,9 @@ import { createAdminClient } from "@/lib/supabase/server"
 import type { ArticleInsert, ArticleUpdate, Article } from "@/lib/types/database"
 
 export class ArticleService {
+  /**
+   * 🔹 Récupérer la liste des articles avec filtres optionnels
+   */
   static async getArticles(
     filters: {
       status?: "all" | "published" | "draft"
@@ -11,243 +14,206 @@ export class ArticleService {
       offset?: number
     } = {},
   ) {
-    console.log("ArticleService.getArticles - Début de la fonction")
-    console.log("Filtres reçus:", filters)
-    
-    try {
-      const supabase = await createAdminClient()
-      console.log("Client Supabase créé")
+    console.log("🟢 ArticleService.getArticles - Début")
+    const supabase = await createAdminClient()
 
-      // 1. Récupérer les articles de base
+    try {
       let articlesQuery = supabase
         .from("articles")
         .select("*")
         .order("created_at", { ascending: false })
 
-      // Appliquer les filtres sur les articles
+      // --- Filtres ---
       if (filters.status === "published") {
         articlesQuery = articlesQuery.eq("is_published", true)
-        console.log("Filtre publié appliqué")
       } else if (filters.status === "draft") {
         articlesQuery = articlesQuery.eq("is_published", false)
-        console.log("Filtre brouillon appliqué")
       }
 
       if (filters.category && filters.category !== "all") {
         articlesQuery = articlesQuery.eq("category_id", filters.category)
-        console.log("Filtre catégorie appliqué:", filters.category)
       }
 
       if (filters.search && filters.search.trim() !== "") {
         articlesQuery = articlesQuery.or(
           `title.ilike.%${filters.search}%,excerpt.ilike.%${filters.search}%,content.ilike.%${filters.search}%`,
         )
-        console.log("Filtre recherche appliqué:", filters.search)
       }
 
-      // Pagination
       if (filters.limit) {
         articlesQuery = articlesQuery.limit(filters.limit)
-        console.log("Limite appliquée:", filters.limit)
       }
+
       if (filters.offset) {
-        articlesQuery = articlesQuery.range(filters.offset, filters.offset + (filters.limit || 10) - 1)
-        console.log("Offset appliqué:", filters.offset)
+        const start = filters.offset
+        const end = filters.offset + (filters.limit || 10) - 1
+        articlesQuery = articlesQuery.range(start, end)
       }
 
-      console.log("Exécution de la requête articles...")
       const { data: articles, error: articlesError } = await articlesQuery
+      if (articlesError) throw articlesError
 
-      if (articlesError) {
-        console.error("Erreur lors de la récupération des articles:", articlesError)
-        throw new Error(`Failed to fetch articles: ${articlesError.message}`)
-      }
+      if (!articles || articles.length === 0) return []
 
-      console.log("Articles récupérés avec succès:", articles?.length || 0, "articles")
+      // --- Récupération des IDs associés ---
+      const authorIds = [...new Set(articles.map(a => a.author_id).filter(Boolean))]
+      const categoryIds = [...new Set(articles.map(a => a.category_id).filter(Boolean))]
 
-      if (!articles || articles.length === 0) {
-        return []
-      }
-
-      // 2. Récupérer les IDs uniques pour les jointures
-      const authorIds = [...new Set(articles.map(article => article.author_id).filter(Boolean))]
-      const categoryIds = [...new Set(articles.map(article => article.category_id).filter(Boolean))]
-
-      console.log("IDs auteurs uniques:", authorIds)
-      console.log("IDs catégories uniques:", categoryIds)
-
-      // 3. Récupérer les auteurs (si nécessaire)
+      // --- Auteurs ---
       let authors: any[] = []
       if (authorIds.length > 0) {
-        console.log("Récupération des auteurs...")
         const { data: authorsData, error: authorsError } = await supabase
           .from("users")
           .select("id, first_name, last_name, avatar_url")
           .in("id", authorIds)
 
-        if (authorsError) {
-          console.error("Erreur lors de la récupération des auteurs:", authorsError)
-          // On continue sans les auteurs plutôt que de faire échouer toute la requête
-        } else {
-          authors = authorsData || []
-          console.log("Auteurs récupérés:", authors.length)
-        }
+        if (!authorsError) authors = authorsData || []
       }
 
-      // 4. Récupérer les catégories (si nécessaire)
+      // --- Catégories ---
       let categories: any[] = []
       if (categoryIds.length > 0) {
-        console.log("Récupération des catégories...")
         const { data: categoriesData, error: categoriesError } = await supabase
           .from("article_categories")
           .select("id, name, slug, color")
           .in("id", categoryIds)
 
-        if (categoriesError) {
-          console.error("Erreur lors de la récupération des catégories:", categoriesError)
-          // On continue sans les catégories plutôt que de faire échouer toute la requête
-        } else {
-          categories = categoriesData || []
-          console.log("Catégories récupérées:", categories.length)
-        }
+        if (!categoriesError) categories = categoriesData || []
       }
 
-      // 5. Joindre les données
+      // --- Enrichissement des articles ---
       const enrichedArticles = articles.map(article => {
         const author = authors.find(a => a.id === article.author_id) || null
         const category = categories.find(c => c.id === article.category_id) || null
+
+        // ✅ Correction : garantir que tags est toujours un tableau
+        const tags =
+          Array.isArray(article.tags)
+            ? article.tags
+            : typeof article.tags === "string"
+            ? article.tags.split(",").map(t => t.trim()).filter(Boolean)
+            : []
 
         return {
           ...article,
           author,
           category,
+          tags,
         }
       })
 
-      console.log("Articles enrichis avec succès:", enrichedArticles.length)
-      console.log("Premier article enrichi:", enrichedArticles[0])
-
       return enrichedArticles
-
     } catch (error) {
-      console.error("Erreur dans ArticleService.getArticles:", error)
-      throw error
+      console.error("❌ Erreur dans getArticles:", error)
+      throw new Error("Impossible de récupérer les articles.")
     }
   }
 
+  /**
+   * 🔹 Récupérer un article par ID
+   */
   static async getArticleById(id: string) {
-    try {
-      const supabase = await createAdminClient()
+    const supabase = await createAdminClient()
 
-      // 1. Récupérer l'article
-      const { data: article, error: articleError } = await supabase
+    try {
+      const { data: article, error } = await supabase
         .from("articles")
         .select("*")
         .eq("id", id)
         .single()
 
-      if (articleError) {
-        console.error("Error fetching article:", articleError)
-        throw new Error("Failed to fetch article")
-      }
+      if (error || !article) throw error || new Error("Article introuvable")
 
-      if (!article) {
-        throw new Error("Article not found")
-      }
+      const [author, category] = await Promise.all([
+        article.author_id
+          ? supabase
+              .from("users")
+              .select("id, first_name, last_name, avatar_url")
+              .eq("id", article.author_id)
+              .single()
+              .then(res => res.data)
+          : null,
+        article.category_id
+          ? supabase
+              .from("article_categories")
+              .select("id, name, slug, color")
+              .eq("id", article.category_id)
+              .single()
+              .then(res => res.data)
+          : null,
+      ])
 
-      // 2. Récupérer l'auteur si nécessaire
-      let author = null
-      if (article.author_id) {
-        const { data: authorData } = await supabase
-          .from("users")
-          .select("id, first_name, last_name, avatar_url")
-          .eq("id", article.author_id)
-          .single()
-        author = authorData
-      }
+      const tags =
+        Array.isArray(article.tags)
+          ? article.tags
+          : typeof article.tags === "string"
+          ? article.tags.split(",").map(t => t.trim()).filter(Boolean)
+          : []
 
-      // 3. Récupérer la catégorie si nécessaire
-      let category = null
-      if (article.category_id) {
-        const { data: categoryData } = await supabase
-          .from("article_categories")
-          .select("id, name, slug, color")
-          .eq("id", article.category_id)
-          .single()
-        category = categoryData
-      }
-
-      return {
-        ...article,
-        author,
-        category,
-      }
+      return { ...article, author, category, tags }
     } catch (error) {
-      console.error("Error in getArticleById:", error)
-      throw error
+      console.error("❌ Erreur dans getArticleById:", error)
+      throw new Error("Impossible de récupérer l’article.")
     }
   }
 
+  /**
+   * 🔹 Récupérer un article par son slug
+   */
   static async getArticleBySlug(slug: string) {
-    try {
-      const supabase = await createAdminClient()
+    const supabase = await createAdminClient()
 
-      // 1. Récupérer l'article
-      const { data: article, error: articleError } = await supabase
+    try {
+      const { data: article, error } = await supabase
         .from("articles")
         .select("*")
         .eq("slug", slug)
         .eq("is_published", true)
         .single()
 
-      if (articleError) {
-        console.error("Error fetching article by slug:", articleError)
-        throw new Error("Failed to fetch article")
-      }
+      if (error || !article) throw error || new Error("Article introuvable")
 
-      if (!article) {
-        throw new Error("Article not found")
-      }
+      const [author, category] = await Promise.all([
+        article.author_id
+          ? supabase
+              .from("users")
+              .select("id, first_name, last_name, avatar_url")
+              .eq("id", article.author_id)
+              .single()
+              .then(res => res.data)
+          : null,
+        article.category_id
+          ? supabase
+              .from("article_categories")
+              .select("id, name, slug, color")
+              .eq("id", article.category_id)
+              .single()
+              .then(res => res.data)
+          : null,
+      ])
 
-      // 2. Récupérer l'auteur si nécessaire
-      let author = null
-      if (article.author_id) {
-        const { data: authorData } = await supabase
-          .from("users")
-          .select("id, first_name, last_name, avatar_url")
-          .eq("id", article.author_id)
-          .single()
-        author = authorData
-      }
+      const tags =
+        Array.isArray(article.tags)
+          ? article.tags
+          : typeof article.tags === "string"
+          ? article.tags.split(",").map(t => t.trim()).filter(Boolean)
+          : []
 
-      // 3. Récupérer la catégorie si nécessaire
-      let category = null
-      if (article.category_id) {
-        const { data: categoryData } = await supabase
-          .from("article_categories")
-          .select("id, name, slug, color")
-          .eq("id", article.category_id)
-          .single()
-        category = categoryData
-      }
-
-      return {
-        ...article,
-        author,
-        category,
-      }
+      return { ...article, author, category, tags }
     } catch (error) {
-      console.error("Error in getArticleBySlug:", error)
-      throw error
+      console.error("❌ Erreur dans getArticleBySlug:", error)
+      throw new Error("Impossible de récupérer l’article.")
     }
   }
 
+  /**
+   * 🔹 Récupérer des articles liés
+   */
   static async getRelatedArticles(currentArticleId: string, categoryId: string, limit: number = 3) {
-    try {
-      const supabase = await createAdminClient()
+    const supabase = await createAdminClient()
 
-      // 1. Récupérer les articles liés
-      const { data: articles, error: articlesError } = await supabase
+    try {
+      const { data: articles, error } = await supabase
         .from("articles")
         .select("*")
         .eq("category_id", categoryId)
@@ -256,48 +222,38 @@ export class ArticleService {
         .order("created_at", { ascending: false })
         .limit(limit)
 
-      if (articlesError) {
-        console.error("Error fetching related articles:", articlesError)
-        throw new Error("Failed to fetch related articles")
-      }
+      if (error) throw error
+      if (!articles || articles.length === 0) return []
 
-      if (!articles || articles.length === 0) {
-        return []
-      }
+      const { data: categories } = await supabase
+        .from("article_categories")
+        .select("id, name, slug, color")
+        .in("id", [categoryId])
 
-      // 2. Récupérer les catégories
-      const categoryIds = [...new Set(articles.map(article => article.category_id).filter(Boolean))]
-      let categories: any[] = []
-      
-      if (categoryIds.length > 0) {
-        const { data: categoriesData } = await supabase
-          .from("article_categories")
-          .select("id, name, slug, color")
-          .in("id", categoryIds)
-        categories = categoriesData || []
-      }
-
-      // 3. Joindre les données
       return articles.map(article => {
-        const category = categories.find(c => c.id === article.category_id) || null
-        return {
-          ...article,
-          category,
-        }
+        const category = categories?.find(c => c.id === article.category_id) || null
+        const tags =
+          Array.isArray(article.tags)
+            ? article.tags
+            : typeof article.tags === "string"
+            ? article.tags.split(",").map(t => t.trim()).filter(Boolean)
+            : []
+        return { ...article, category, tags }
       })
     } catch (error) {
-      console.error("Error in getRelatedArticles:", error)
-      throw error
+      console.error("❌ Erreur dans getRelatedArticles:", error)
+      throw new Error("Impossible de récupérer les articles liés.")
     }
   }
 
+  /**
+   * 🔹 Créer un article
+   */
   static async createArticle(articleData: ArticleInsert) {
+    const supabase = await createAdminClient()
+
     try {
-      const supabase = await createAdminClient()
-
-      // Générer un slug à partir du titre
       const slug = this.generateSlug(articleData.title)
-
       const { data, error } = await supabase
         .from("articles")
         .insert({
@@ -309,28 +265,26 @@ export class ArticleService {
         .select("*")
         .single()
 
-      if (error) {
-        console.error("Error creating article:", error)
-        throw new Error("Failed to create article")
-      }
-
+      if (error) throw error
       return data
     } catch (error) {
-      console.error("Error in createArticle:", error)
-      throw error
+      console.error("❌ Erreur dans createArticle:", error)
+      throw new Error("Impossible de créer l’article.")
     }
   }
 
+  /**
+   * 🔹 Mettre à jour un article
+   */
   static async updateArticle(id: string, articleData: ArticleUpdate) {
-    try {
-      const supabase = await createAdminClient()
+    const supabase = await createAdminClient()
 
+    try {
       const updateData = {
         ...articleData,
         updated_at: new Date().toISOString(),
       }
 
-      // Générer un nouveau slug si le titre a changé
       if (articleData.title) {
         updateData.slug = this.generateSlug(articleData.title)
       }
@@ -342,80 +296,66 @@ export class ArticleService {
         .select("*")
         .single()
 
-      if (error) {
-        console.error("Error updating article:", error)
-        throw new Error("Failed to update article")
-      }
-
+      if (error) throw error
       return data
     } catch (error) {
-      console.error("Error in updateArticle:", error)
-      throw error
+      console.error("❌ Erreur dans updateArticle:", error)
+      throw new Error("Impossible de mettre à jour l’article.")
     }
   }
 
+  /**
+   * 🔹 Supprimer un article
+   */
   static async deleteArticle(id: string) {
+    const supabase = await createAdminClient()
     try {
-      const supabase = await createAdminClient()
-
-      const { error } = await supabase
-        .from("articles")
-        .delete()
-        .eq("id", id)
-
-      if (error) {
-        console.error("Error deleting article:", error)
-        throw new Error("Failed to delete article")
-      }
-
+      const { error } = await supabase.from("articles").delete().eq("id", id)
+      if (error) throw error
       return true
     } catch (error) {
-      console.error("Error in deleteArticle:", error)
-      throw error
+      console.error("❌ Erreur dans deleteArticle:", error)
+      throw new Error("Impossible de supprimer l’article.")
     }
   }
 
+  /**
+   * 🔹 Récupérer toutes les catégories actives
+   */
   static async getCategories() {
-    try {
-      const supabase = await createAdminClient()
+    const supabase = await createAdminClient()
 
+    try {
       const { data, error } = await supabase
         .from("article_categories")
         .select("*")
         .eq("is_active", true)
         .order("sort_order", { ascending: true })
 
-      if (error) {
-        console.error("Error fetching categories:", error)
-        throw new Error("Failed to fetch categories")
-      }
-
+      if (error) throw error
       return data || []
     } catch (error) {
-      console.error("Error in getCategories:", error)
-      throw error
+      console.error("❌ Erreur dans getCategories:", error)
+      throw new Error("Impossible de récupérer les catégories.")
     }
   }
 
+  /**
+   * 🔹 Incrémenter le compteur de vues
+   */
   static async incrementViewCount(id: string) {
+    const supabase = await createAdminClient()
     try {
-      const supabase = await createAdminClient()
-
-      const { error } = await supabase
-        .from("articles")
-        .update({ view_count: supabase.rpc("increment") })
-        .eq("id", id)
-
-      if (error) {
-        console.error("Error incrementing view count:", error)
-        // On ne fait pas échouer la requête pour un simple compteur
-      }
+      const { error } = await supabase.rpc("increment_article_views", { article_id: id })
+      if (error) console.warn("⚠️ Erreur de compteur:", error)
     } catch (error) {
-      console.error("Error in incrementViewCount:", error)
-      // On ne fait pas échouer la requête pour un simple compteur
+      console.warn("⚠️ incrementViewCount non critique:", error)
     }
   }
 
+  /**
+   * 🔹 Générer un slug à partir du titre
+   */
   private static generateSlug(title: string): string {
     return title
       .toLowerCase()
@@ -428,7 +368,7 @@ export class ArticleService {
   }
 }
 
-// Exports pour compatibilité avec l'ancien code
+// ✅ Exports pour compatibilité
 export const getArticles = ArticleService.getArticles
 export const getArticleById = ArticleService.getArticleById
 export const getArticleBySlug = ArticleService.getArticleBySlug
@@ -439,5 +379,4 @@ export const deleteArticle = ArticleService.deleteArticle
 export const getCategories = ArticleService.getCategories
 export const incrementViewCount = ArticleService.incrementViewCount
 
-// Export du type Article
 export type { Article }

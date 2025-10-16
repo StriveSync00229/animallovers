@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, Plus, Search, Edit, Trash2, Heart, Target, Calendar } from "lucide-react"
+import { motion } from "framer-motion"
 
 interface DonationCampaign {
   id: string
@@ -156,39 +157,51 @@ export default function AdminDonationsPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+          <Card className="overflow-hidden border-0 shadow-md bg-gradient-to-br from-rose-50 to-pink-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Collectes actives</CardTitle>
-              <Heart className="h-4 w-4 text-muted-foreground" />
+              <div className="p-2 rounded-md bg-white/70 shadow-sm">
+                <Heart className="h-4 w-4 text-rose-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{campaigns.filter((c) => c.active).length}</div>
+              <div className="text-2xl font-bold tracking-tight">{campaigns.filter((c) => c.active).length}</div>
             </CardContent>
           </Card>
+          </motion.div>
 
-          <Card>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.05 }}>
+          <Card className="overflow-hidden border-0 shadow-md bg-gradient-to-br from-emerald-50 to-green-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total collecté</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
+              <div className="p-2 rounded-md bg-white/70 shadow-sm">
+                <Target className="h-4 w-4 text-emerald-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold tracking-tight">
                 {campaigns.reduce((sum, c) => sum + c.currentAmount, 0).toLocaleString()}€
               </div>
             </CardContent>
           </Card>
+          </motion.div>
 
-          <Card>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}>
+          <Card className="overflow-hidden border-0 shadow-md bg-gradient-to-br from-amber-50 to-yellow-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Objectif total</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <div className="p-2 rounded-md bg-white/70 shadow-sm">
+                <Calendar className="h-4 w-4 text-amber-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold tracking-tight">
                 {campaigns.reduce((sum, c) => sum + c.targetAmount, 0).toLocaleString()}€
               </div>
             </CardContent>
           </Card>
+          </motion.div>
         </div>
 
         <Card>

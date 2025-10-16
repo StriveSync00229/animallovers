@@ -16,6 +16,7 @@ import {
   Plus,
   Settings
 } from "lucide-react"
+import { motion } from "framer-motion"
 
 export default function AdminDashboardPage() {
   return (
@@ -40,62 +41,79 @@ export default function AdminDashboardPage() {
 
       {/* Statistiques principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+        <Card className="overflow-hidden border-0 shadow-md bg-gradient-to-br from-blue-50 to-indigo-50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Articles</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 rounded-md bg-white/70 shadow-sm">
+              <FileText className="h-4 w-4 text-blue-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">42</div>
+            <div className="text-2xl font-bold tracking-tight">42</div>
             <p className="text-xs text-muted-foreground">
               +12% par rapport au mois dernier
             </p>
           </CardContent>
         </Card>
-
-        <Card>
+        </motion.div>
+        
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.05 }}>
+        <Card className="overflow-hidden border-0 shadow-md bg-gradient-to-br from-emerald-50 to-green-50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Produits</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 rounded-md bg-white/70 shadow-sm">
+              <Package className="h-4 w-4 text-emerald-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">156</div>
+            <div className="text-2xl font-bold tracking-tight">156</div>
             <p className="text-xs text-muted-foreground">
               +8% par rapport au mois dernier
             </p>
           </CardContent>
         </Card>
-
-        <Card>
+        </motion.div>
+        
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}>
+        <Card className="overflow-hidden border-0 shadow-md bg-gradient-to-br from-fuchsia-50 to-pink-50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Utilisateurs</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 rounded-md bg-white/70 shadow-sm">
+              <Users className="h-4 w-4 text-fuchsia-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,234</div>
+            <div className="text-2xl font-bold tracking-tight">1,234</div>
             <p className="text-xs text-muted-foreground">
               +23% par rapport au mois dernier
             </p>
           </CardContent>
         </Card>
-
-        <Card>
+        </motion.div>
+        
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.15 }}>
+        <Card className="overflow-hidden border-0 shadow-md bg-gradient-to-br from-amber-50 to-yellow-50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Donations</CardTitle>
-            <Heart className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 rounded-md bg-white/70 shadow-sm">
+              <Heart className="h-4 w-4 text-amber-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€2,456</div>
+            <div className="text-2xl font-bold tracking-tight">€2,456</div>
             <p className="text-xs text-muted-foreground">
               +15% par rapport au mois dernier
             </p>
           </CardContent>
         </Card>
+        </motion.div>
       </div>
 
       {/* Actions rapides */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+        <Card className="border-0 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -122,8 +140,10 @@ export default function AdminDashboardPage() {
             </Button>
           </CardContent>
         </Card>
+        </motion.div>
 
-        <Card>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.05 }}>
+        <Card className="border-0 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
@@ -150,8 +170,10 @@ export default function AdminDashboardPage() {
             </Button>
           </CardContent>
         </Card>
+        </motion.div>
 
-        <Card>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}>
+        <Card className="border-0 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Heart className="h-5 w-5" />
@@ -178,6 +200,7 @@ export default function AdminDashboardPage() {
             </Button>
           </CardContent>
         </Card>
+        </motion.div>
       </div>
 
       {/* Activité récente */}

@@ -121,13 +121,6 @@ const navigationGroups = [
         description: "Logs et sécurité",
         badge: null,
       },
-      {
-        title: "Base de données",
-        href: "/admin/database",
-        icon: Database,
-        description: "Gestion de la DB",
-        badge: "New",
-      },
     ],
   },
 ]

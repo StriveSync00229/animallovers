@@ -30,7 +30,8 @@ export async function GET() {
     // Tester la connexion en récupérant le nombre d'articles
     const { data: articles, error: articlesError } = await supabase
       .from("articles")
-      .select("id", { count: "exact" })
+      .select("id")
+      .limit(1)
 
     if (articlesError) {
       console.error("Erreur lors de la récupération des articles:", articlesError)
@@ -46,7 +47,8 @@ export async function GET() {
     // Tester la récupération des catégories
     const { data: categories, error: categoriesError } = await supabase
       .from("article_categories")
-      .select("id", { count: "exact" })
+      .select("id")
+      .limit(1)
 
     if (categoriesError) {
       console.error("Erreur lors de la récupération des catégories:", categoriesError)

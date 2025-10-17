@@ -5,7 +5,7 @@ import Image from "next/image"
 
 const AboutHero = () => {
   return (
-    <section className="relative overflow-hidden bg-[#f8f5f0] py-20 md:py-28">
+    <section className="relative overflow-hidden bg-gradient-to-br from-rose-50 via-orange-50 to-yellow-50 py-20 md:py-28">
       <div className="container px-4 mx-auto">
         <div className="grid items-center grid-cols-1 gap-12 lg:grid-cols-2">
           <motion.div

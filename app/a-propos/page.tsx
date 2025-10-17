@@ -2,8 +2,6 @@ import type { Metadata } from "next"
 import AboutHero from "@/components/about/hero"
 import MissionSection from "@/components/about/mission-section"
 import WhySection from "@/components/about/why-section"
-import TeamSection from "@/components/about/team-section"
-import PartnersSection from "@/components/about/partners-section"
 import ValuesSection from "@/components/about/values-section"
 import ImpactSection from "@/components/about/impact-section"
 import ContactSection from "@/components/about/contact-section"
@@ -18,9 +16,7 @@ export default function AboutPage() {
     <main className="flex flex-col min-h-screen">
       <AboutHero />
       <MissionSection />
-      <WhySection />
-      <TeamSection />
-      <PartnersSection />
+      <WhySection />  
       <ValuesSection />
       <ImpactSection />
       <ContactSection />

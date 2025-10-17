@@ -5,7 +5,7 @@ import Image from "next/image"
 
 const WhySection = () => {
   return (
-    <section className="py-16 bg-[#f8f5f0] md:py-24">
+    <section className="bg-gradient-to-br from-rose-50 via-orange-50 to-yellow-50 py-16 bg-[#f8f5f0] md:py-24">
       <div className="container px-4 mx-auto">
         <div className="grid items-center grid-cols-1 gap-12 lg:grid-cols-2">
           <motion.div

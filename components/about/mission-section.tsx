@@ -27,7 +27,7 @@ const MissionSection = () => {
   }
 
   return (
-    <section className="py-16 bg-white md:py-24">
+    <section className="bg-gradient-to-br from-rose-50 via-orange-50 to-yellow-50 py-16 bg-white md:py-24">
       <div className="container px-4 mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -52,8 +52,8 @@ const MissionSection = () => {
         >
           {missions.map((mission, index) => (
             <motion.div key={index} variants={itemVariants} className="flex items-start mb-6">
-              <div className="flex items-center justify-center w-10 h-10 mr-4 bg-[#c4d8b2] rounded-full shrink-0">
-                <Check className="w-5 h-5 text-[#4a6741]" />
+              <div className="flex items-center justify-center w-10 h-10 mr-4 bg-pink-100 rounded-full shrink-0">
+                <Check className="w-5 h-5 text-pink-600" />
               </div>
               <div>
                 <p className="text-lg font-medium text-gray-800">{mission}</p>

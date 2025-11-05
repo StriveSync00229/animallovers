@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getActiveCampaigns, getFeaturedCampaigns } from "@/lib/server/donation-service"
+import { getActiveCampaigns, getFeaturedCampaigns } from "@/lib/server/campaign-service"
 
 export async function GET(request: NextRequest) {
   try {

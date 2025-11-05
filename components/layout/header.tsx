@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Menu, X, Heart, ShoppingBag, BookOpen, ChevronDown, Cat, Dog, MessageCircle } from "lucide-react"
+import { Menu, X, Heart, ShoppingBag, BookOpen, ChevronDown, Cat, Dog, MessageCircle, PawPrint, HandHeart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -25,7 +25,8 @@ const Header = () => {
     { name: "Accueil", href: "/" },
     { name: "À propos", href: "/a-propos" },
     { name: "Dressage & Santé", href: "/dressage-sante", icon: <BookOpen className="w-4 h-4 mr-1" /> },
-    { name: "Faire un don", href: "/faire-un-don" },
+    { name: "Adoption", href: "/adoption", icon: <PawPrint className="w-4 h-4 mr-1" /> },
+    { name: "Faire un don", href: "/faire-un-don", icon: <HandHeart className="w-4 h-4 mr-1" /> },
   ]
 
   return (
@@ -89,7 +90,7 @@ const Header = () => {
             </DropdownMenu>
           </div>
 
-          {/* Menu Contact après Produits */}
+          {/* Menu Contact */}
           <Link
             href="/contact"
             className="flex items-center text-base font-semibold text-gray-700 tracking-wide transition-colors hover:text-rose-500"
@@ -101,7 +102,7 @@ const Header = () => {
 
         <div className="hidden md:flex items-center space-x-4">
           <Button asChild size="sm" className="bg-rose-500 hover:bg-rose-600">
-            <Link href="/faire-un-don">Faire un don</Link>
+            <Link href="/user/login">Se connecter</Link>
           </Button>
         </div>
 
@@ -186,7 +187,7 @@ const Header = () => {
 
             <div className="flex flex-col space-y-2 pt-2 border-t">
               <Button asChild size="sm" className="justify-center bg-rose-500 hover:bg-rose-600">
-                <Link href="/faire-un-don">Faire un don</Link>
+                <Link href="/user/login">Se connecter</Link>
               </Button>
             </div>
           </nav>

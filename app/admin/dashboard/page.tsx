@@ -1,253 +1,230 @@
 "use client"
 
+import AdminLayoutWrapper from "@/components/admin/admin-layout-wrapper"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { 
-  BarChart3, 
-  FileText, 
-  Package, 
-  Users, 
-  Heart, 
-  TrendingUp, 
-  DollarSign,
-  Eye,
-  Plus,
-  Settings
-} from "lucide-react"
-import { motion } from "framer-motion"
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts"
+
+const donationsData = [
+  { month: "Jan", montant: 2400 },
+  { month: "Fév", montant: 3200 },
+  { month: "Mar", montant: 2800 },
+  { month: "Avr", montant: 4100 },
+  { month: "Mai", montant: 3800 },
+  { month: "Juin", montant: 5200 },
+]
+
+const salesData = [
+  { month: "Jan", ventes: 1200 },
+  { month: "Fév", ventes: 1900 },
+  { month: "Mar", ventes: 1600 },
+  { month: "Avr", ventes: 2400 },
+  { month: "Mai", ventes: 2100 },
+  { month: "Juin", ventes: 2800 },
+]
+
+const recentActivities = [
+  {
+    id: 1,
+    type: "don",
+    user: "Marie Dupont",
+    action: "a fait un don de 50€",
+    time: "Il y a 5 min",
+    image: "/smiling-woman.png",
+  },
+  {
+    id: 2,
+    type: "product",
+    user: "Jean Martin",
+    action: 'a acheté "Croquettes Premium"',
+    time: "Il y a 12 min",
+    image: "/man-smiling.jpg",
+  },
+  {
+    id: 3,
+    type: "adoption",
+    user: "Sophie Bernard",
+    action: 'a réservé "Max le Golden"',
+    time: "Il y a 23 min",
+    image: "/woman-happy.jpg",
+  },
+  {
+    id: 4,
+    type: "message",
+    user: "Pierre Leroy",
+    action: "a envoyé un message",
+    time: "Il y a 1h",
+    image: "/man-professional.jpg",
+  },
+  {
+    id: 5,
+    type: "newsletter",
+    user: "Emma Rousseau",
+    action: "s'est inscrite à la newsletter",
+    time: "Il y a 2h",
+    image: "/professional-woman.png",
+  },
+]
+
+const quickLinks = [
+  { title: "Dressage & Santé", href: "/admin/dressage-sante", icon: "📚", color: "bg-blue-50 text-blue-600" },
+  { title: "Produits", href: "/admin/produits", icon: "🛍️", color: "bg-green-50 text-green-600" },
+  { title: "Don", href: "/admin/don", icon: "💝", color: "bg-pink-50 text-pink-600" },
+  { title: "Adoption", href: "/admin/adoption", icon: "🐾", color: "bg-purple-50 text-purple-600" },
+]
 
 export default function AdminDashboardPage() {
   return (
-    <div className="space-y-6">
-      {/* En-tête */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Tableau de bord</h1>
-          <p className="text-gray-600">Vue d'ensemble de votre plateforme AnimalLovers</p>
+    <AdminLayoutWrapper title="Dashboard">
+      <div className="space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="animate-fadeInUp border-0 shadow-lg" style={{ animationDelay: "0.1s" }}>
+            <CardHeader className="pb-3">
+              <CardDescription className="text-sm font-medium text-gray-600">Total Dons</CardDescription>
+              <CardTitle className="text-3xl font-bold text-gray-900">21,500€</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-green-600 font-medium">+12.5% ce mois</p>
+            </CardContent>
+          </Card>
+
+          <Card className="animate-fadeInUp border-0 shadow-lg" style={{ animationDelay: "0.2s" }}>
+            <CardHeader className="pb-3">
+              <CardDescription className="text-sm font-medium text-gray-600">Ventes Produits</CardDescription>
+              <CardTitle className="text-3xl font-bold text-gray-900">12,800€</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-green-600 font-medium">+8.3% ce mois</p>
+            </CardContent>
+          </Card>
+
+          <Card className="animate-fadeInUp border-0 shadow-lg" style={{ animationDelay: "0.3s" }}>
+            <CardHeader className="pb-3">
+              <CardDescription className="text-sm font-medium text-gray-600">Adoptions</CardDescription>
+              <CardTitle className="text-3xl font-bold text-gray-900">47</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-green-600 font-medium">+15 ce mois</p>
+            </CardContent>
+          </Card>
+
+          <Card className="animate-fadeInUp border-0 shadow-lg" style={{ animationDelay: "0.4s" }}>
+            <CardHeader className="pb-3">
+              <CardDescription className="text-sm font-medium text-gray-600">Utilisateurs</CardDescription>
+              <CardTitle className="text-3xl font-bold text-gray-900">1,234</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-green-600 font-medium">+23 cette semaine</p>
+            </CardContent>
+          </Card>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4 mr-2" />
-            Paramètres
-          </Button>
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvel article
-          </Button>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="animate-fadeInUp border-0 shadow-lg" style={{ animationDelay: "0.5s" }}>
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Évolution des Dons</CardTitle>
+              <CardDescription>Montants collectés par mois</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={donationsData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="month" stroke="#888" />
+                  <YAxis stroke="#888" />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="montant" stroke="#dc2626" strokeWidth={3} name="Montant (€)" />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="animate-fadeInUp border-0 shadow-lg" style={{ animationDelay: "0.6s" }}>
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Ventes de Produits</CardTitle>
+              <CardDescription>Chiffre d'affaires mensuel</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={salesData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="month" stroke="#888" />
+                  <YAxis stroke="#888" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="ventes" fill="#dc2626" name="Ventes (€)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Activities & Quick Links */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2 animate-fadeInUp border-0 shadow-lg" style={{ animationDelay: "0.7s" }}>
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Activités Récentes</CardTitle>
+              <CardDescription>Dernières actions sur la plateforme</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentActivities.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <img
+                      src={activity.image || "/placeholder.svg"}
+                      alt={activity.user}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        <span className="font-semibold">{activity.user}</span> {activity.action}
+                      </p>
+                      <p className="text-xs text-gray-500">{activity.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="animate-fadeInUp border-0 shadow-lg" style={{ animationDelay: "0.8s" }}>
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Raccourcis</CardTitle>
+              <CardDescription>Accès rapide aux sections</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {quickLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`flex items-center gap-3 p-4 rounded-lg transition-all duration-200 hover:scale-105 ${link.color}`}
+                  >
+                    <span className="text-2xl">{link.icon}</span>
+                    <span className="font-medium">{link.title}</span>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-
-      {/* Statistiques principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-        <Card className="overflow-hidden border-0 shadow-md bg-gradient-to-br from-blue-50 to-indigo-50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Articles</CardTitle>
-            <div className="p-2 rounded-md bg-white/70 shadow-sm">
-              <FileText className="h-4 w-4 text-blue-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">42</div>
-            <p className="text-xs text-muted-foreground">
-              +12% par rapport au mois dernier
-            </p>
-          </CardContent>
-        </Card>
-        </motion.div>
-        
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.05 }}>
-        <Card className="overflow-hidden border-0 shadow-md bg-gradient-to-br from-emerald-50 to-green-50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Produits</CardTitle>
-            <div className="p-2 rounded-md bg-white/70 shadow-sm">
-              <Package className="h-4 w-4 text-emerald-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">156</div>
-            <p className="text-xs text-muted-foreground">
-              +8% par rapport au mois dernier
-            </p>
-          </CardContent>
-        </Card>
-        </motion.div>
-        
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}>
-        <Card className="overflow-hidden border-0 shadow-md bg-gradient-to-br from-fuchsia-50 to-pink-50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Utilisateurs</CardTitle>
-            <div className="p-2 rounded-md bg-white/70 shadow-sm">
-              <Users className="h-4 w-4 text-fuchsia-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">1,234</div>
-            <p className="text-xs text-muted-foreground">
-              +23% par rapport au mois dernier
-            </p>
-          </CardContent>
-        </Card>
-        </motion.div>
-        
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.15 }}>
-        <Card className="overflow-hidden border-0 shadow-md bg-gradient-to-br from-amber-50 to-yellow-50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Donations</CardTitle>
-            <div className="p-2 rounded-md bg-white/70 shadow-sm">
-              <Heart className="h-4 w-4 text-amber-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">€2,456</div>
-            <p className="text-xs text-muted-foreground">
-              +15% par rapport au mois dernier
-            </p>
-          </CardContent>
-        </Card>
-        </motion.div>
-      </div>
-
-      {/* Actions rapides */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-        <Card className="border-0 shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Gestion des articles
-            </CardTitle>
-            <CardDescription>
-              Créez et gérez vos articles de blog
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Articles publiés</span>
-              <Badge variant="secondary">38</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Brouillons</span>
-              <Badge variant="outline">4</Badge>
-            </div>
-            <Button asChild className="w-full">
-              <Link href="/admin/articles">
-                <Eye className="h-4 w-4 mr-2" />
-                Voir tous les articles
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.05 }}>
-        <Card className="border-0 shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Gestion des produits
-            </CardTitle>
-            <CardDescription>
-              Gérez votre catalogue de produits
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Produits actifs</span>
-              <Badge variant="secondary">142</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">En rupture</span>
-              <Badge variant="destructive">14</Badge>
-            </div>
-            <Button asChild className="w-full">
-              <Link href="/admin/products">
-                <Eye className="h-4 w-4 mr-2" />
-                Voir tous les produits
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}>
-        <Card className="border-0 shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Heart className="h-5 w-5" />
-              Donations
-            </CardTitle>
-            <CardDescription>
-              Suivez vos campagnes de dons
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Ce mois</span>
-              <Badge variant="secondary">€2,456</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Donateurs</span>
-              <Badge variant="outline">89</Badge>
-            </div>
-            <Button asChild className="w-full">
-              <Link href="/admin/donations">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Voir les donations
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-        </motion.div>
-      </div>
-
-      {/* Activité récente */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Activité récente</CardTitle>
-          <CardDescription>
-            Les dernières actions sur votre plateforme
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-3 rounded-lg bg-gray-50">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
-                <FileText className="h-4 w-4 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Nouvel article publié</p>
-                <p className="text-xs text-gray-600">"Comment dresser un chiot" - il y a 2 heures</p>
-              </div>
-              <Badge variant="outline">Publié</Badge>
-            </div>
-
-            <div className="flex items-center gap-4 p-3 rounded-lg bg-gray-50">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
-                <DollarSign className="h-4 w-4 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Nouvelle donation</p>
-                <p className="text-xs text-gray-600">€50 de Marie D. - il y a 4 heures</p>
-              </div>
-              <Badge variant="outline">€50</Badge>
-            </div>
-
-            <div className="flex items-center gap-4 p-3 rounded-lg bg-gray-50">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100">
-                <Users className="h-4 w-4 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Nouvel utilisateur</p>
-                <p className="text-xs text-gray-600">Jean P. s'est inscrit - il y a 6 heures</p>
-              </div>
-              <Badge variant="outline">Nouveau</Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </AdminLayoutWrapper>
   )
 }

@@ -1,4 +1,5 @@
-// Types pour les campagnes de collecte
+import { createClient } from "@/lib/supabase/server"
+
 export interface DonationCampaign {
   id: string
   title: string
@@ -15,92 +16,99 @@ export interface DonationCampaign {
   animalType: "chien" | "chat"
 }
 
-// Simulation d'une base de données en mémoire
-const campaigns: DonationCampaign[] = [
-  {
-    id: "1",
-    title: "Sauvons Bella",
-    description: "Bella, une chienne de 3 ans, a besoin d'une opération urgente",
-    story:
-      "Bella a été trouvée blessée sur le bord de la route. Elle nécessite une intervention chirurgicale coûteuse pour retrouver l'usage de sa patte arrière.",
-    targetAmount: 2500,
-    currentAmount: 1850,
-    image: "/placeholder.svg?height=200&width=300",
-    active: true,
-    featured: true,
-    createdAt: "2024-01-10",
-    endDate: "2024-02-10",
-    animalName: "Bella",
-    animalType: "chien",
-  },
-  {
-    id: "2",
-    title: "Refuge pour Minou",
-    description: "Aidez-nous à construire un nouveau refuge pour chats abandonnés",
-    story:
-      "Notre refuge actuel est saturé. Nous avons besoin de fonds pour construire de nouveaux espaces d'accueil pour les chats abandonnés.",
-    targetAmount: 15000,
-    currentAmount: 8500,
-    image: "/placeholder.svg?height=200&width=300",
-    active: true,
-    featured: false,
-    createdAt: "2024-01-05",
-    endDate: "2024-03-05",
-    animalName: "Collectif",
-    animalType: "chat",
-  },
-]
+const TABLE = "campaigns"
 
-// Fonction pour obtenir toutes les campagnes
 export async function getAllCampaigns(): Promise<DonationCampaign[]> {
-  return campaigns
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("*")
+    .order("createdAt", { ascending: false })
+  if (error) {
+    console.error("Erreur récupération campaigns:", error)
+    return []
+  }
+  return data as DonationCampaign[]
 }
 
-// Fonction pour obtenir les campagnes actives
 export async function getActiveCampaigns(): Promise<DonationCampaign[]> {
-  return campaigns.filter((campaign) => campaign.active)
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("*")
+    .eq("active", true)
+    .order("createdAt", { ascending: false })
+  return (data as DonationCampaign[]) || []
 }
 
-// Fonction pour obtenir les campagnes mises en avant
 export async function getFeaturedCampaigns(): Promise<DonationCampaign[]> {
-  return campaigns.filter((campaign) => campaign.active && campaign.featured)
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("*")
+    .eq("active", true)
+    .eq("featured", true)
+    .order("createdAt", { ascending: false })
+  return (data as DonationCampaign[]) || []
 }
 
-// Fonction pour obtenir une campagne par ID
 export async function getCampaignById(id: string): Promise<DonationCampaign | null> {
-  return campaigns.find((campaign) => campaign.id === id) || null
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("*")
+    .eq("id", id)
+    .single()
+  if (error || !data) return null
+  return data as DonationCampaign
 }
 
-// Fonction pour créer une nouvelle campagne
 export async function createCampaign(
   campaignData: Omit<DonationCampaign, "id" | "currentAmount" | "createdAt">,
-): Promise<DonationCampaign> {
-  const newCampaign: DonationCampaign = {
-    id: Date.now().toString(),
-    currentAmount: 0,
-    createdAt: new Date().toISOString().split("T")[0],
+): Promise<DonationCampaign | null> {
+  const supabase = await createClient()
+  const toInsert = {
     ...campaignData,
+    currentAmount: 0,
+    createdAt: new Date().toISOString(),
   }
-
-  campaigns.push(newCampaign)
-  return newCampaign
+  const { data, error } = await supabase
+    .from(TABLE)
+    .insert([toInsert])
+    .select()
+    .single()
+  if (error) {
+    console.error("Erreur création campaign:", error)
+    return null
+  }
+  return data as DonationCampaign
 }
 
-// Fonction pour mettre à jour une campagne
 export async function updateCampaign(id: string, updates: Partial<DonationCampaign>): Promise<DonationCampaign | null> {
-  const index = campaigns.findIndex((campaign) => campaign.id === id)
-  if (index === -1) return null
-
-  campaigns[index] = { ...campaigns[index], ...updates }
-  return campaigns[index]
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from(TABLE)
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single()
+  if (error || !data) {
+    console.error("Erreur maj campaign:", error)
+    return null
+  }
+  return data as DonationCampaign
 }
 
-// Fonction pour supprimer une campagne
 export async function deleteCampaign(id: string): Promise<boolean> {
-  const index = campaigns.findIndex((campaign) => campaign.id === id)
-  if (index === -1) return false
-
-  campaigns.splice(index, 1)
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from(TABLE)
+    .delete()
+    .eq("id", id)
+  if (error) {
+    console.error("Erreur suppression campaign:", error)
+    return false
+  }
   return true
 }
 
@@ -138,12 +146,12 @@ export async function getCampaignStats(): Promise<{
   totalRaised: number
   totalTarget: number
 }> {
-  const activeCampaigns = campaigns.filter((c) => c.active)
+  const activeCampaigns = await getActiveCampaigns()
 
   return {
-    totalCampaigns: campaigns.length,
+    totalCampaigns: await getAllCampaigns().then((c) => c.length),
     activeCampaigns: activeCampaigns.length,
-    totalRaised: campaigns.reduce((sum, c) => sum + c.currentAmount, 0),
-    totalTarget: campaigns.reduce((sum, c) => sum + c.targetAmount, 0),
+    totalRaised: activeCampaigns.reduce((sum, c) => sum + c.currentAmount, 0),
+    totalTarget: activeCampaigns.reduce((sum, c) => sum + c.targetAmount, 0),
   }
 }

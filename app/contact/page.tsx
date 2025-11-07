@@ -61,18 +61,6 @@ export default function ContactPage() {
       description: "Réponse sous 24h",
     },
     {
-      icon: Phone,
-      title: "Téléphone",
-      value: "+33 1 23 45 67 89",
-      description: "Lun-Ven 9h-18h",
-    },
-    {
-      icon: MapPin,
-      title: "Adresse",
-      value: "123 Rue des Animaux, 75001 Paris",
-      description: "Siège social",
-    },
-    {
       icon: Clock,
       title: "Horaires",
       value: "Lun-Ven: 9h-18h",
@@ -151,18 +139,7 @@ export default function ContactPage() {
                 ))}
               </div>
 
-              {/* Carte */}
-              <Card className="mt-8">
-                <CardContent className="p-0">
-                  <div className="h-48 bg-gray-200 rounded-lg flex items-center justify-center">
-                    <div className="text-center text-gray-500">
-                      <MapPin className="w-12 h-12 mx-auto mb-2" />
-                      <p>Carte interactive</p>
-                      <p className="text-sm">123 Rue des Animaux, Paris</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Carte supprimée comme demandé */}
             </motion.div>
           </div>
 

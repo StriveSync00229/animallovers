@@ -175,3 +175,9 @@ export async function getProductCategories() {
 
 // Fonction pour obtenir les données d'un produit (alias pour getProductBySlug)
 export const getProductData = getProductBySlug
+
+export async function getMultiSpeciesProducts(filters: ProductFilters = {}): Promise<Product[]> {
+  // On force le filtre pour la species 'mixte'
+  const mergedFilters = { ...filters, species: "mixte" };
+  return getProducts(mergedFilters);
+}

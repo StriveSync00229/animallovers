@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
 
     const filters = {
+      status: "published" as const, // Uniquement les articles publiés pour l'API publique
       category: searchParams.get("category") || undefined,
       species: searchParams.get("species") || undefined,
       age: searchParams.get("age") || undefined,

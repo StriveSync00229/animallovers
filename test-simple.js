@@ -1,31 +1,87 @@
 const { createClient } = require('@supabase/supabase-js')
+const fs = require('fs')
+const path = require('path')
 
-const supabaseUrl = 'https://uegwnvoaumemwmiaufbp.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZ3dudm9hdW1lbXdtaWF1ZmJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjE3OTEwNiwiZXhwIjoyMDY3NzU1MTA2fQ.lBkCSHs8L00Dyltyiqhd-A2frJILmK5uTeT0SB_LQRc'
+// Charger les variables d'environnement depuis .env.local
+function loadEnv() {
+  const envPath = path.join(__dirname, '.env.local')
+  
+  if (fs.existsSync(envPath)) {
+    const envFile = fs.readFileSync(envPath, 'utf8')
+    envFile.split('\n').forEach(line => {
+      const match = line.match(/^([^=:#]+)=(.*)$/)
+      if (match) {
+        const key = match[1].trim()
+        const value = match[2].trim().replace(/^["']|["']$/g, '')
+        process.env[key] = value
+      }
+    })
+  }
+}
 
-console.log('Test Supabase...')
+loadEnv()
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Variables d\'environnement manquantes!')
+  console.error('Assurez-vous que NEXT_PUBLIC_SUPABASE_URL est défini dans .env.local')
+  console.error('Et que SUPABASE_SERVICE_ROLE_KEY ou NEXT_PUBLIC_SUPABASE_ANON_KEY est défini')
+  process.exit(1)
+}
+
+console.log('🚀 Test Supabase...')
 console.log('URL:', supabaseUrl)
+console.log('Clé:', supabaseKey.substring(0, 20) + '...')
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function test() {
   try {
-    console.log('Création du client...')
+    console.log('\n📡 Test de connexion...')
     
-    // Test simple
+    // Test simple avec une table réelle (articles)
     const { data, error } = await supabase
-      .from('information_schema.tables')
-      .select('table_name')
+      .from('articles')
+      .select('id, title')
       .limit(5)
     
     if (error) {
-      console.error('Erreur:', error.message)
+      console.error('❌ Erreur:', error.message)
+      console.error('Détails:', error)
+      
+      // Si la table n'existe pas, tester une autre table
+      console.log('\n🔄 Test avec une autre table...')
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id')
+        .limit(1)
+      
+      if (usersError) {
+        console.error('❌ Erreur avec users:', usersError.message)
+      } else {
+        console.log('✅ Connexion réussie! Table users accessible')
+      }
     } else {
-      console.log('Succès! Tables:', data?.length || 0)
-      console.log('Premières tables:', data?.map(t => t.table_name))
+      console.log('✅ Connexion réussie!')
+      console.log(`📊 Articles trouvés: ${data?.length || 0}`)
+      if (data && data.length > 0) {
+        console.log('Premiers articles:')
+        data.forEach(article => {
+          console.log(`  - ${article.title || article.id}`)
+        })
+      }
     }
   } catch (err) {
-    console.error('Erreur générale:', err.message)
+    console.error('❌ Erreur générale:', err.message)
+    if (err.cause) {
+      console.error('Cause:', err.cause)
+    }
+    console.error('\n💡 Vérifiez:')
+    console.error('  1. Que le fichier .env.local existe')
+    console.error('  2. Que les variables NEXT_PUBLIC_SUPABASE_URL sont correctes')
+    console.error('  3. Votre connexion internet')
   }
 }
 

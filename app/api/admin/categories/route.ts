@@ -44,36 +44,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Le nom de la catégorie est requis" }, { status: 400 })
     }
 
-    // Génération automatique du slug si non fourni
-    if (!body.slug) {
-      body.slug = body.name
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .trim()
-    }
-
     const categoryData = {
       name: body.name,
-      slug: body.slug,
+      slug: body.slug || undefined, // sera généré automatiquement si non fourni
       description: body.description || null,
+      color: body.color || null,
+      icon: body.icon || null,
+      parent_id: body.parent_id || null,
+      sort_order: body.sort_order || 0,
+      is_active: body.is_active !== undefined ? body.is_active : true,
     }
 
-    // TODO: Implement category creation using ArticleService
-    // const category = await ArticleService.createCategory(categoryData)
+    // Créer la catégorie principale
+    const category = await ArticleService.createCategory(categoryData)
+
+    // Si des sous-catégories sont fournies, les créer
+    let subcategories = []
+    if (body.subcategories && Array.isArray(body.subcategories) && body.subcategories.length > 0) {
+      subcategories = await ArticleService.createSubcategories(category.id, body.subcategories)
+    } else if (body.subcategories && typeof body.subcategories === 'string') {
+      // Si c'est une string (textarea), la parser
+      const subcategoryNames = body.subcategories
+        .split('\n')
+        .map((line: string) => line.trim())
+        .filter((line: string) => line.length > 0)
+      
+      if (subcategoryNames.length > 0) {
+        subcategories = await ArticleService.createSubcategories(category.id, subcategoryNames)
+      }
+    }
 
     return NextResponse.json(
       {
         success: true,
-        data: null, // category,
+        data: {
+          ...category,
+          subcategories,
+        },
       },
       { status: 201 },
     )
   } catch (error) {
     console.error("Error in POST /api/admin/categories:", error)
-    return NextResponse.json({ success: false, error: "Failed to create category" }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : "Failed to create category"
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 })
   }
 }

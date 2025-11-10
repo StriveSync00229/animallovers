@@ -1,32 +1,46 @@
 import { NextResponse } from "next/server"
-import { createAdminClient } from "@/lib/supabase/server"
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const body = await request.json()
-    const { name, slug, description, color, icon, is_active, sort_order } = body || {}
-    const supabase = await createAdminClient()
-    const { data, error } = await supabase
-      .from("article_categories")
-      .update({ name, slug, description, color, icon, is_active, sort_order })
-      .eq("id", params.id)
-      .select("*")
-      .single()
-    if (error) throw error
+    const { ArticleService } = await import("@/lib/server/article-service")
+    
+    const categoryData = {
+      name: body.name,
+      slug: body.slug,
+      description: body.description || null,
+      color: body.color || null,
+      icon: body.icon || null,
+      is_active: body.is_active,
+      sort_order: body.sort_order,
+      parent_id: body.parent_id || null,
+    }
+
+    // Supprimer les propriétés undefined
+    Object.keys(categoryData).forEach(key => {
+      if (categoryData[key as keyof typeof categoryData] === undefined) {
+        delete categoryData[key as keyof typeof categoryData]
+      }
+    })
+
+    const data = await ArticleService.updateCategory(params.id, categoryData)
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error?.message || "Erreur update" }, { status: 500 })
+    console.error("Error in PUT /api/admin/categories/[id]:", error)
+    const errorMessage = error instanceof Error ? error.message : "Erreur update"
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 })
   }
 }
 
 export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   try {
-    const supabase = await createAdminClient()
-    const { error } = await supabase.from("article_categories").delete().eq("id", params.id)
-    if (error) throw error
+    const { ArticleService } = await import("@/lib/server/article-service")
+    await ArticleService.deleteCategory(params.id)
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error?.message || "Erreur suppression" }, { status: 500 })
+    console.error("Error in DELETE /api/admin/categories/[id]:", error)
+    const errorMessage = error instanceof Error ? error.message : "Erreur suppression"
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 })
   }
 }
 

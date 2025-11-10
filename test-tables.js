@@ -1,10 +1,39 @@
 const { createClient } = require('@supabase/supabase-js')
+const fs = require('fs')
+const path = require('path')
 
-const supabaseUrl = 'https://uegwnvoaumemwmiaufbp.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZ3dudm9hdW1lbXdtaWF1ZmJwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjE3OTEwNiwiZXhwIjoyMDY3NzU1MTA2fQ.lBkCSHs8L00Dyltyiqhd-A2frJILmK5uTeT0SB_LQRc'
+// Charger les variables d'environnement depuis .env.local
+function loadEnv() {
+  const envPath = path.join(__dirname, '.env.local')
+  
+  if (fs.existsSync(envPath)) {
+    const envFile = fs.readFileSync(envPath, 'utf8')
+    envFile.split('\n').forEach(line => {
+      const match = line.match(/^([^=:#]+)=(.*)$/)
+      if (match) {
+        const key = match[1].trim()
+        const value = match[2].trim().replace(/^["']|["']$/g, '')
+        process.env[key] = value
+      }
+    })
+  }
+}
+
+loadEnv()
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Variables d\'environnement manquantes!')
+  console.error('Assurez-vous que NEXT_PUBLIC_SUPABASE_URL est défini dans .env.local')
+  console.error('Et que SUPABASE_SERVICE_ROLE_KEY ou NEXT_PUBLIC_SUPABASE_ANON_KEY est défini')
+  process.exit(1)
+}
 
 console.log('🚀 Test des tables Supabase')
 console.log('URL:', supabaseUrl)
+console.log('Clé:', supabaseKey.substring(0, 20) + '...')
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 

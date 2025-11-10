@@ -1,4 +1,4 @@
-const fetch = require('node-fetch')
+// Node.js 18+ a fetch intégré nativement, pas besoin de node-fetch
 
 async function testAPI() {
   console.log('🧪 Test de l\'API Next.js')

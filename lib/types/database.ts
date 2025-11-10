@@ -64,6 +64,9 @@ export interface Database {
           seo_title: string | null
           seo_description: string | null
           seo_keywords: string | null
+          pdf_url: string | null
+          price: number | null
+          is_ebook: boolean
           created_at: string
           updated_at: string
         }
@@ -92,6 +95,9 @@ export interface Database {
           seo_title?: string | null
           seo_description?: string | null
           seo_keywords?: string | null
+          pdf_url?: string | null
+          price?: number | null
+          is_ebook?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -119,6 +125,9 @@ export interface Database {
           seo_title?: string | null
           seo_description?: string | null
           seo_keywords?: string | null
+          pdf_url?: string | null
+          price?: number | null
+          is_ebook?: boolean
           updated_at?: string
         }
       }

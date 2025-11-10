@@ -1,49 +1,110 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Calendar, User, ArrowRight } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 
-// Données fictives pour les articles de blog
-const previewArticles = [
-  {
-    id: 1,
-    title: "Comment préparer votre maison pour l'arrivée d'un chiot",
-    excerpt:
-      "Découvrez les étapes essentielles pour préparer votre domicile avant l'arrivée de votre nouveau compagnon à quatre pattes.",
-    date: "15 avril 2023",
-    author: "Marie Dupont",
-    image:
-      "https://images.unsplash.com/photo-1583511655826-05700442b31b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-    category: "Conseils",
-  },
-  {
-    id: 2,
-    title: "Les bienfaits des chats sur la santé mentale",
-    excerpt:
-      "Les études montrent que vivre avec un chat peut réduire le stress et améliorer votre bien-être émotionnel. Voici pourquoi.",
-    date: "28 mars 2023",
-    author: "Thomas Martin",
-    image:
-      "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-    category: "Santé",
-  },
-  {
-    id: 3,
-    title: "Guide complet sur l'alimentation canine",
-    excerpt:
-      "Tout ce que vous devez savoir sur la nutrition de votre chien pour lui assurer une vie longue et en bonne santé.",
-    date: "10 mars 2023",
-    author: "Sophie Leclerc",
-    image:
-      "https://images.unsplash.com/photo-1623387641168-d9803ddd3f35?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-    category: "Nutrition",
-  },
-]
+interface Article {
+  id: string
+  title: string
+  excerpt: string | null
+  content: string
+  slug: string
+  featured_image: string | null
+  category_id: string | null
+  subcategory_id: string | null
+  created_at: string
+  published_at: string | null
+  category?: {
+    id: string
+    name: string
+    slug: string
+    color: string | null
+  } | null
+  subcategory?: {
+    id: string
+    name: string
+    slug: string
+    color: string | null
+  } | null
+  author?: {
+    id: string
+    first_name: string | null
+    last_name: string | null
+    avatar_url: string | null
+  } | null
+}
 
 const BlogPreview = () => {
+  const [articles, setArticles] = useState<Article[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadArticles()
+  }, [])
+
+  const loadArticles = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch("/api/articles?limit=6")
+      const result = await response.json()
+
+      if (result.success) {
+        setArticles(result.data || [])
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des articles:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return ""
+    const date = new Date(dateString)
+    return date.toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })
+  }
+
+  const getAuthorName = (author: Article["author"]) => {
+    if (!author) return "AnimalLovers"
+    if (author.first_name && author.last_name) {
+      return `${author.first_name} ${author.last_name}`
+    }
+    return author.first_name || author.last_name || "AnimalLovers"
+  }
+
+  const getCategoryName = (article: Article) => {
+    if (article.subcategory) {
+      return article.subcategory.name
+    }
+    if (article.category) {
+      return article.category.name
+    }
+    return "Article"
+  }
+
+  const getArticleImage = (article: Article) => {
+    if (article.featured_image) {
+      return article.featured_image
+    }
+    // Image par défaut selon l'espèce ou catégorie
+    return "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+  }
+
+  const getArticleUrl = (article: Article) => {
+    if (article.slug) {
+      return `/dressage-sante/${article.slug}`
+    }
+    return `/dressage-sante/${article.id}`
+  }
+
   return (
     <section className="py-16 bg-white md:py-24">
       <div className="container px-4 mx-auto">
@@ -60,57 +121,74 @@ const BlogPreview = () => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {previewArticles.map((article, index) => (
-            <motion.article
-              key={article.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="overflow-hidden bg-white border rounded-lg shadow-sm"
-            >
-              <Link href={`/blog/${article.id}`} className="block">
-                <div className="relative h-48">
-                  <Image
-                    src={article.image || "/placeholder.svg"}
-                    alt={article.title}
-                    fill
-                    className="object-cover transition-transform duration-300 hover:scale-105"
-                  />
-                  <div className="absolute top-0 right-0 px-3 py-1 m-2 text-xs font-medium text-white bg-rose-500 rounded-full">
-                    {article.category}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : articles.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <p>Aucun article publié pour le moment.</p>
+            <p className="text-sm mt-2">Les articles publiés depuis le dashboard admin apparaîtront ici.</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+              {articles.map((article, index) => (
+                <motion.article
+                  key={article.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="overflow-hidden bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <Link href={getArticleUrl(article)} className="block">
+                    <div className="relative h-48">
+                      <Image
+                        src={getArticleImage(article)}
+                        alt={article.title}
+                        fill
+                        className="object-cover transition-transform duration-300 hover:scale-105"
+                      />
+                      <div className="absolute top-0 right-0 px-3 py-1 m-2 text-xs font-medium text-white bg-rose-500 rounded-full">
+                        {getCategoryName(article)}
+                      </div>
+                    </div>
+                  </Link>
+                  <div className="p-5">
+                    <Link href={getArticleUrl(article)}>
+                      <h3 className="mb-2 text-xl font-semibold transition-colors hover:text-rose-500 line-clamp-2">
+                        {article.title}
+                      </h3>
+                    </Link>
+                    <p className="mb-4 text-gray-600 line-clamp-3">
+                      {article.excerpt || article.content.substring(0, 150) + "..."}
+                    </p>
+                    <div className="flex items-center justify-between pt-4 mt-4 text-sm text-gray-500 border-t">
+                      <div className="flex items-center">
+                        <Calendar className="w-4 h-4 mr-1" />
+                        <span>{formatDate(article.published_at || article.created_at)}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <User className="w-4 h-4 mr-1" />
+                        <span className="truncate max-w-[100px]">{getAuthorName(article.author)}</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </Link>
-              <div className="p-5">
-                <Link href={`/blog/${article.id}`}>
-                  <h3 className="mb-2 text-xl font-semibold transition-colors hover:text-rose-500">{article.title}</h3>
-                </Link>
-                <p className="mb-4 text-gray-600">{article.excerpt}</p>
-                <div className="flex items-center justify-between pt-4 mt-4 text-sm text-gray-500 border-t">
-                  <div className="flex items-center">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    <span>{article.date}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <User className="w-4 h-4 mr-1" />
-                    <span>{article.author}</span>
-                  </div>
-                </div>
-              </div>
-            </motion.article>
-          ))}
-        </div>
+                </motion.article>
+              ))}
+            </div>
 
-        <div className="flex justify-center mt-12">
-          <Button asChild className="bg-rose-500 hover:bg-rose-600">
-            <Link href="/blog" className="flex items-center">
-              Voir tous les articles
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Link>
-          </Button>
-        </div>
+            <div className="flex justify-center mt-12">
+              <Button asChild className="bg-rose-500 hover:bg-rose-600">
+                <Link href="/dressage-sante" className="flex items-center">
+                  Voir tous les articles
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </section>
   )

@@ -6,6 +6,7 @@ import AdoptionPreview from "@/components/home/adoption-preview"
 import DonationSection from "@/components/home/donation-section"
 import DonationCampaigns from "@/components/home/donation-campaigns"
 import BlogPreview from "@/components/home/blog-preview"
+import EbookPreview from "@/components/home/ebook-preview"
 import TestimonialsSection from "@/components/home/testimonials-section"
 import NewsletterSection from "@/components/home/newsletter-section"
 
@@ -24,6 +25,7 @@ export default function HomePage() {
       <ProductsSection />
       <DonationSection />
       <DonationCampaigns />
+      <EbookPreview />
       <BlogPreview />
       <TestimonialsSection />
       <NewsletterSection />

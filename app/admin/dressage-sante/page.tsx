@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import AdminLayoutWrapper from "@/components/admin/admin-layout-wrapper"
@@ -593,10 +593,10 @@ export default function DressageSantePage() {
   const handleAddEbook = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!ebookFormData.title.trim() || !ebookFormData.content.trim()) {
+    if (!ebookFormData.title.trim()) {
       toast({
         title: "Erreur",
-        description: "Le titre et le contenu sont requis",
+        description: "Le titre est requis",
         variant: "destructive",
       })
       return
@@ -623,7 +623,7 @@ export default function DressageSantePage() {
     try {
       const ebookData = {
         title: ebookFormData.title,
-        content: ebookFormData.content,
+        
         excerpt: ebookFormData.excerpt || null,
         featured_image: ebookFormData.featured_image || null,
         category_id: ebookFormData.category_id,
@@ -707,7 +707,7 @@ export default function DressageSantePage() {
     if (!articleFormData.title.trim() || !articleFormData.content.trim()) {
       toast({
         title: "Erreur",
-        description: "Le titre et le contenu sont requis",
+        description: "Le titre est requis",
         variant: "destructive",
       })
       return
@@ -1573,19 +1573,6 @@ export default function DressageSantePage() {
                 </p>
               </div>
 
-              {/* Contenu */}
-              <div className="space-y-2">
-                <Label htmlFor="ebook-content">Contenu de l'ebook *</Label>
-                <Textarea
-                  id="ebook-content"
-                  placeholder="Rédigez le contenu de l'ebook ici..."
-                  value={ebookFormData.content}
-                  onChange={(e) => setEbookFormData({ ...ebookFormData, content: e.target.value })}
-                  rows={10}
-                  required
-                />
-              </div>
-
               {/* Espèce, Âge, Niveau */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
@@ -1771,18 +1758,14 @@ export default function DressageSantePage() {
                             <h3 className="font-semibold text-gray-900 mb-1">{article.title}</h3>
                             <p className="text-sm text-gray-600">
                               {category?.name || "Sans catégorie"}
-                              {subcategory && ` • ${subcategory.name}`}
+                              {subcategory &&   }
                             </p>
                             {article.excerpt && (
                               <p className="text-sm text-gray-500 mt-2">{article.excerpt}</p>
                             )}
                           </div>
                           <span
-                            className={`px-3 py-1 text-xs font-medium rounded-full ${
-                              article.is_published
-                                ? "bg-green-100 text-green-700"
-                                : "bg-gray-100 text-gray-700"
-                            }`}
+                            className={px-3 py-1 text-xs font-medium rounded-full }
                           >
                             {article.is_published ? "Publié" : "Brouillon"}
                           </span>
@@ -1836,7 +1819,7 @@ export default function DressageSantePage() {
                           )}
                           {(article as any).is_ebook && (
                             <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-semibold">
-                              📚 Ebook
+                               Ebook
                             </span>
                           )}
                           {(article as any).price && (

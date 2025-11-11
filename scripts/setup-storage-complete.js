@@ -1,28 +1,4 @@
-#!/usr/bin/env node
 
-/**
- * Script 100% automatisé pour configurer Supabase Storage pour les ebooks
- * 
- * Ce script fait TOUT automatiquement :
- * 1. Crée le bucket "ebooks" dans Supabase Storage
- * 2. Configure les politiques RLS pour le bucket (si credentials PostgreSQL fournis)
- * 3. Génère le script SQL si l'exécution automatique n'est pas possible
- * 
- * Usage:
- * node scripts/setup-storage-complete.js
- * 
- * OU
- * pnpm setup:storage
- * 
- * Pour une exécution 100% automatique, ajoutez dans .env.local:
- * - SUPABASE_DB_HOST (host PostgreSQL, ex: db.xxxxx.supabase.co)
- * - SUPABASE_DB_PASSWORD (mot de passe de la base de données)
- * - SUPABASE_DB_USER (optionnel, défaut: postgres)
- * - SUPABASE_DB_NAME (optionnel, défaut: postgres)
- * - SUPABASE_DB_PORT (optionnel, défaut: 5432)
- * 
- * Et installez le package pg: pnpm add pg
- */
 
 const { createClient } = require('@supabase/supabase-js')
 const fs = require('fs')

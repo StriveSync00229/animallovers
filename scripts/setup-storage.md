@@ -1,59 +1,119 @@
-# Configuration de Supabase Storage pour les Ebooks
+# Configuration Supabase Storage - Guide Complet
 
-## Étapes pour créer le bucket "ebooks" dans Supabase
+## 🚀 Installation Rapide (100% Automatique)
 
-1. **Connectez-vous à votre dashboard Supabase**
-   - Allez sur https://app.supabase.com
-   - Sélectionnez votre projet
+### Méthode 1: Avec credentials PostgreSQL (Recommandée)
 
-2. **Accédez à Storage**
-   - Dans le menu latéral, cliquez sur "Storage"
-   - Cliquez sur "New bucket"
+1. **Ajoutez les credentials PostgreSQL dans `.env.local`**:
+   ```env
+   SUPABASE_DB_HOST=db.xxxxx.supabase.co
+   SUPABASE_DB_PASSWORD=votre_mot_de_passe
+   SUPABASE_DB_USER=postgres
+   SUPABASE_DB_NAME=postgres
+   SUPABASE_DB_PORT=5432
+   ```
+   
+   > 💡 Trouvez ces infos dans: Supabase Dashboard > Settings > Database > Connection string
 
-3. **Créez le bucket "ebooks"**
-   - **Name**: `ebooks`
-   - **Public bucket**: ✅ Cochez cette option (pour permettre l'accès public aux fichiers)
-   - **File size limit**: 50 MB (ou plus selon vos besoins)
-   - **Allowed MIME types**: 
-     - Pour les images: `image/jpeg`, `image/jpg`, `image/png`, `image/webp`, `image/gif`
-     - Pour les PDFs: `application/pdf`
-   - Cliquez sur "Create bucket"
+2. **Installez le package `pg`**:
+   ```bash
+   pnpm add pg
+   ```
 
-4. **Configurez les politiques de sécurité (RLS)**
-   - Cliquez sur le bucket "ebooks"
-   - Allez dans l'onglet "Policies"
-   - Créez une politique pour permettre l'upload (si nécessaire):
-     ```sql
-     -- Politique pour permettre l'upload aux administrateurs
-     CREATE POLICY "Allow uploads for authenticated users"
-     ON storage.objects
-     FOR INSERT
-     TO authenticated
-     WITH CHECK (bucket_id = 'ebooks');
+3. **Exécutez le script**:
+   ```bash
+   pnpm setup:storage
+   ```
+   
+   Ou directement:
+   ```bash
+   node scripts/setup-storage-complete.js
+   ```
 
-     -- Politique pour permettre la lecture publique
-     CREATE POLICY "Allow public read access"
-     ON storage.objects
-     FOR SELECT
-     TO public
-     USING (bucket_id = 'ebooks');
-     ```
+✅ **Tout sera configuré automatiquement!**
 
-5. **Vérifiez les variables d'environnement**
-   - Assurez-vous que `SUPABASE_SERVICE_ROLE_KEY` est définie dans votre fichier `.env.local`
-   - Cette clé est nécessaire pour l'upload via l'API admin
+### Méthode 2: Sans credentials PostgreSQL (Semi-automatique)
 
-## Structure des dossiers
+1. **Exécutez le script**:
+   ```bash
+   node scripts/setup-storage-complete.js
+   ```
 
-Les fichiers seront organisés comme suit dans le bucket:
+2. **Le script va**:
+   - ✅ Créer le bucket "ebooks" automatiquement
+   - ✅ Générer le script SQL dans `scripts/setup-storage-policies.sql`
+
+3. **Exécutez le SQL dans Supabase**:
+   - Ouvrez Supabase SQL Editor
+   - Copiez le contenu de `scripts/setup-storage-policies.sql`
+   - Exécutez le script
+
+## 📋 Scripts Disponibles
+
+### Script Principal
+- **`scripts/setup-storage-complete.js`** - Script principal (crée le bucket + génère le SQL)
+
+### Scripts SQL
+- **`scripts/setup-storage-policies.sql`** - Script SQL pour les politiques RLS (généré automatiquement)
+- **`scripts/setup-supabase-storage.sql`** - Script SQL complet (version manuelle)
+
+## 🔍 Vérification
+
+Pour vérifier que les politiques sont créées:
+
+```sql
+SELECT * FROM pg_policies 
+WHERE tablename = 'objects' 
+AND schemaname = 'storage'
+AND policyname LIKE '%ebooks%';
 ```
-ebooks/
-  ├── ebooks/images/  (images de couverture)
-  └── ebooks/pdfs/    (fichiers PDF)
+
+Vous devriez voir 4 politiques.
+
+## 📝 Script SQL à Exécuter
+
+Si vous préférez exécuter le SQL manuellement, voici le script complet:
+
+```sql
+-- Activer RLS
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- Politique 1: Lecture publique
+DROP POLICY IF EXISTS "Allow public read access for ebooks" ON storage.objects;
+CREATE POLICY "Allow public read access for ebooks"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'ebooks');
+
+-- Politique 2: Upload authentifié
+DROP POLICY IF EXISTS "Allow authenticated users to upload ebooks" ON storage.objects;
+CREATE POLICY "Allow authenticated users to upload ebooks"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'ebooks');
+
+-- Politique 3: Update authentifié
+DROP POLICY IF EXISTS "Allow authenticated users to update ebooks" ON storage.objects;
+CREATE POLICY "Allow authenticated users to update ebooks"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (bucket_id = 'ebooks');
+
+-- Politique 4: Delete authentifié
+DROP POLICY IF EXISTS "Allow authenticated users to delete ebooks" ON storage.objects;
+CREATE POLICY "Allow authenticated users to delete ebooks"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'ebooks');
 ```
 
-## Test de l'upload
+## 🎯 Résumé
 
-Une fois le bucket créé, vous pouvez tester l'upload en créant un ebook depuis le dashboard admin.
-Les fichiers seront automatiquement uploadés vers Supabase Storage et les URLs seront stockées dans la base de données.
+**Pour une configuration 100% automatique:**
+1. Ajoutez les credentials PostgreSQL dans `.env.local`
+2. Installez `pg`: `pnpm add pg`
+3. Exécutez: `pnpm setup:storage`
 
+**Pour une configuration semi-automatique:**
+1. Exécutez: `pnpm setup:storage`
+2. Exécutez le SQL généré dans Supabase SQL Editor

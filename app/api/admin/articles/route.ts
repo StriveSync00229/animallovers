@@ -228,11 +228,41 @@ export async function POST(request: NextRequest) {
     console.log("POST /api/admin/articles - Données reçues:", body)
 
     // Validation des données
-    if (!body.title || !body.content) {
+    if (!body.title) {
       return NextResponse.json(
-        { success: false, error: "Le titre et le contenu sont requis" },
+        { success: false, error: "Le titre est requis" },
         { status: 400 }
       )
+    }
+
+    // Pour les ebooks, le contenu n'est pas requis (le contenu est dans le PDF)
+    // Pour les articles normaux, le contenu est requis
+    if (body.is_ebook) {
+      // Validation pour ebook
+      if (!body.pdf_url) {
+        return NextResponse.json(
+          { success: false, error: "L'URL du PDF est requise pour un ebook" },
+          { status: 400 }
+        )
+      }
+      if (!body.price || parseFloat(body.price) <= 0) {
+        return NextResponse.json(
+          { success: false, error: "Le prix doit être supérieur à 0 pour un ebook" },
+          { status: 400 }
+        )
+      }
+      // Pour les ebooks, on peut mettre un contenu vide ou null
+      if (!body.content) {
+        body.content = "" // Contenu vide pour les ebooks
+      }
+    } else {
+      // Validation pour article normal
+      if (!body.content) {
+        return NextResponse.json(
+          { success: false, error: "Le contenu est requis pour un article" },
+          { status: 400 }
+        )
+      }
     }
 
     const article = await ArticleService.createArticle(body)
@@ -241,28 +271,51 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: article,
-      message: "Article créé avec succès"
+      message: body.is_ebook ? "Ebook créé avec succès" : "Article créé avec succès"
     })
   } catch (error) {
     console.error("Error in POST /api/admin/articles:", error)
     
     let errorMessage = "Failed to create article"
     let statusCode = 500
+    let errorDetails: any = null
 
     if (error instanceof Error) {
       errorMessage = error.message
       
+      // Extraire les détails de l'erreur Supabase si disponibles
+      if ((error as any).code) {
+        errorDetails = {
+          code: (error as any).code,
+          message: (error as any).message,
+          details: (error as any).details,
+          hint: (error as any).hint
+        }
+      }
+      
       if (error.message.includes("duplicate") || error.message.includes("unique")) {
         statusCode = 409 // Conflict
-      } else if (error.message.includes("validation")) {
+        errorMessage = "Un article avec ce titre existe déjà"
+      } else if (error.message.includes("validation") || error.message.includes("check constraint")) {
         statusCode = 400 // Bad Request
+        errorMessage = error.message.includes("species") 
+          ? "L'espèce sélectionnée n'est pas valide"
+          : error.message.includes("age_range")
+          ? "La tranche d'âge sélectionnée n'est pas valide"
+          : error.message.includes("difficulty_level")
+          ? "Le niveau de difficulté sélectionné n'est pas valide"
+          : "Erreur de validation des données"
+      } else if (error.message.includes("foreign key") || error.message.includes("violates foreign key")) {
+        statusCode = 400
+        errorMessage = "La catégorie ou sous-catégorie sélectionnée n'existe pas"
       }
     }
 
     return NextResponse.json(
       { 
         success: false, 
-        error: errorMessage 
+        error: errorMessage,
+        details: process.env.NODE_ENV === "development" ? errorDetails : undefined
       }, 
       { status: statusCode }
     )

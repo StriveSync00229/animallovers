@@ -15,6 +15,8 @@ interface ProductFilters {
   search?: string
   limit?: number
   offset?: number
+  is_featured?: boolean
+  is_active?: boolean
 }
 
 export async function getProducts(filters: ProductFilters = {}): Promise<Product[]> {
@@ -27,11 +29,24 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
       product_brands!products_brand_id_fkey(name, logo_url),
       product_categories!products_category_id_fkey(name, slug)
     `)
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
+
+  // Par défaut, afficher uniquement les produits actifs pour les utilisateurs publics
+  // Si is_active n'est pas explicitement défini à false, on filtre sur is_active = true
+  if (filters.is_active !== false) {
+    query = query.eq("is_active", true)
+  }
+  // Si is_active est explicitement false, on ne filtre pas (pour l'admin qui veut voir tous les produits)
+
+  if (filters.is_featured !== undefined) {
+    query = query.eq("is_featured", filters.is_featured)
+  }
 
   if (filters.species) {
     query = query.or(`species.eq.${filters.species},species.eq.mixte`)
+  }
+
+  if (filters.category) {
+    query = query.eq("category_id", filters.category)
   }
 
   if (filters.minPrice) {
@@ -45,6 +60,8 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
   if (filters.search) {
     query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
   }
+
+  query = query.order("created_at", { ascending: false })
 
   if (filters.limit) {
     query = query.limit(filters.limit)

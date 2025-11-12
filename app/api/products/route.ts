@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
       maxPrice: searchParams.get("maxPrice") ? Number.parseFloat(searchParams.get("maxPrice")!) : undefined,
       limit: searchParams.get("limit") ? Number.parseInt(searchParams.get("limit")!) : undefined,
       offset: searchParams.get("offset") ? Number.parseInt(searchParams.get("offset")!) : undefined,
+      is_featured: searchParams.get("is_featured") === "true" ? true : searchParams.get("is_featured") === "false" ? false : undefined,
+      is_active: searchParams.get("is_active") === "true" ? true : searchParams.get("is_active") === "false" ? false : undefined,
     }
 
     const products = await getProducts(filters)

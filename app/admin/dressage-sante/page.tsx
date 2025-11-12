@@ -61,6 +61,7 @@ export default function DressageSantePage() {
   const [showAddSubcategory, setShowAddSubcategory] = useState(false)
   const [showAddArticle, setShowAddArticle] = useState(false)
   const [showAddEbook, setShowAddEbook] = useState(false)
+  const [ebookColumnsExist, setEbookColumnsExist] = useState<boolean | null>(null)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [selectedCategoryForSub, setSelectedCategoryForSub] = useState<Category | null>(null)
   const [formData, setFormData] = useState({
@@ -266,7 +267,7 @@ export default function DressageSantePage() {
   }
 
   const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ?")) {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ?\n\n⚠️ Attention: Cette action supprimera également toutes les sous-catégories associées si elles ne sont pas utilisées par des articles.")) {
       return
     }
 
@@ -277,31 +278,35 @@ export default function DressageSantePage() {
 
       const result = await response.json()
 
-      if (result.success) {
-        toast({
-          title: "Succès",
-          description: "Catégorie supprimée avec succès",
-        })
-        loadCategories()
-      } else {
+      if (!response.ok || !result.success) {
         toast({
           title: "Erreur",
-          description: result.error || "Impossible de supprimer la catégorie",
+          description: result.error || `Erreur ${response.status}: ${response.statusText}`,
           variant: "destructive",
         })
+        return
       }
+
+      toast({
+        title: "Succès",
+        description: "Catégorie supprimée avec succès",
+      })
+      loadCategories()
     } catch (error) {
       console.error("Erreur lors de la suppression de la catégorie:", error)
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Une erreur est survenue lors de la suppression de la catégorie"
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de la suppression de la catégorie",
+        description: errorMessage,
         variant: "destructive",
       })
     }
   }
 
   const handleDeleteSubcategory = async (subcategoryId: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cette sous-catégorie ?")) {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette sous-catégorie ?\n\n⚠️ Attention: Cette action échouera si la sous-catégorie est utilisée par des articles.")) {
       return
     }
 
@@ -312,24 +317,28 @@ export default function DressageSantePage() {
 
       const result = await response.json()
 
-      if (result.success) {
-        toast({
-          title: "Succès",
-          description: "Sous-catégorie supprimée avec succès",
-        })
-        loadCategories()
-      } else {
+      if (!response.ok || !result.success) {
         toast({
           title: "Erreur",
-          description: result.error || "Impossible de supprimer la sous-catégorie",
+          description: result.error || `Erreur ${response.status}: ${response.statusText}`,
           variant: "destructive",
         })
+        return
       }
+
+      toast({
+        title: "Succès",
+        description: "Sous-catégorie supprimée avec succès",
+      })
+      loadCategories()
     } catch (error) {
       console.error("Erreur lors de la suppression de la sous-catégorie:", error)
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Une erreur est survenue lors de la suppression de la sous-catégorie"
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de la suppression de la sous-catégorie",
+        description: errorMessage,
         variant: "destructive",
       })
     }
@@ -425,8 +434,43 @@ export default function DressageSantePage() {
       })
 
       if (result.success) {
-        setArticles(result.data || [])
-        console.log(`✅ ${result.data?.length || 0} articles chargés avec succès`)
+        const allArticles = result.data || []
+        setArticles(allArticles)
+        console.log(`✅ ${allArticles.length} articles chargés avec succès`)
+        
+        // Debug: vérifier les ebooks et détecter si les colonnes existent
+        const ebooksFound = allArticles.filter((article: any) => {
+          return article.is_ebook === true || article.pdf_url || article.price
+        })
+        console.log(`📚 ${ebooksFound.length} ebooks détectés dans les articles chargés`)
+        if (ebooksFound.length > 0) {
+          console.log("📚 Détails des ebooks:", ebooksFound.map((e: any) => ({
+            id: e.id,
+            title: e.title,
+            is_ebook: e.is_ebook,
+            pdf_url: e.pdf_url,
+            price: e.price
+          })))
+        }
+        
+        // Détecter si les colonnes ebook existent
+        // Vérifier si ebooksCount est > 0 (l'API le calcule si les colonnes existent)
+        // OU si au moins un article a is_ebook défini
+        const apiEbooksCount = result.ebooksCount || 0
+        const hasEbookInData = allArticles.some((article: any) => article.is_ebook === true)
+        const hasEbookColumns = apiEbooksCount > 0 || hasEbookInData || 
+                                allArticles.some((article: any) => 
+                                  article.pdf_url !== undefined || article.price !== undefined
+                                )
+        setEbookColumnsExist(hasEbookColumns)
+        
+        if (!hasEbookColumns) {
+          console.warn("⚠️  Les colonnes ebook ne semblent pas exister dans la base de données")
+          console.warn("⚠️  Veuillez exécuter le script scripts/add-ebook-fields.sql")
+          console.warn("⚠️  EbooksCount depuis l'API:", apiEbooksCount)
+        } else {
+          console.log("✅ Les colonnes ebook existent dans la base de données")
+        }
       } else {
         console.error("❌ Réponse avec success=false:", result)
         toast({
@@ -621,22 +665,37 @@ export default function DressageSantePage() {
     }
 
     try {
+      // Nettoyer les données avant l'envoi
+      const cleanedSpecies = ebookFormData.species && ebookFormData.species.trim() !== "" ? ebookFormData.species : null
+      const cleanedAgeRange = ebookFormData.age_range && ebookFormData.age_range.trim() !== "" ? ebookFormData.age_range : null
+      const cleanedDifficultyLevel = ebookFormData.difficulty_level && ebookFormData.difficulty_level.trim() !== "" ? ebookFormData.difficulty_level : null
+      
+      const cleanedPrice = parseFloat(ebookFormData.price)
+      if (isNaN(cleanedPrice) || cleanedPrice <= 0) {
+        toast({
+          title: "Erreur",
+          description: "Le prix doit être un nombre valide supérieur à 0",
+          variant: "destructive",
+        })
+        return
+      }
+      
       const ebookData = {
-        title: ebookFormData.title,
-        
-        excerpt: ebookFormData.excerpt || null,
-        featured_image: ebookFormData.featured_image || null,
+        title: ebookFormData.title.trim(),
+        content: ebookFormData.content || "", // Contenu vide pour les ebooks (le contenu est dans le PDF)
+        excerpt: ebookFormData.excerpt && ebookFormData.excerpt.trim() !== "" ? ebookFormData.excerpt.trim() : null,
+        featured_image: ebookFormData.featured_image && ebookFormData.featured_image.trim() !== "" ? ebookFormData.featured_image.trim() : null,
         category_id: ebookFormData.category_id,
-        subcategory_id: ebookFormData.subcategory_id || null,
-        species: ebookFormData.species || null,
-        age_range: ebookFormData.age_range || null,
-        difficulty_level: ebookFormData.difficulty_level || null,
-        reading_time: ebookFormData.reading_time ? parseInt(ebookFormData.reading_time) : null,
-        price: parseFloat(ebookFormData.price),
-        pdf_url: ebookFormData.pdf_url || null,
-        seo_title: ebookFormData.seo_title || null,
-        seo_description: ebookFormData.seo_description || null,
-        seo_keywords: ebookFormData.seo_keywords || null,
+        subcategory_id: ebookFormData.subcategory_id && ebookFormData.subcategory_id.trim() !== "" ? ebookFormData.subcategory_id : null,
+        species: cleanedSpecies,
+        age_range: cleanedAgeRange,
+        difficulty_level: cleanedDifficultyLevel,
+        reading_time: ebookFormData.reading_time && ebookFormData.reading_time.trim() !== "" ? parseInt(ebookFormData.reading_time) : null,
+        price: cleanedPrice,
+        pdf_url: ebookFormData.pdf_url && ebookFormData.pdf_url.trim() !== "" ? ebookFormData.pdf_url.trim() : null,
+        seo_title: ebookFormData.seo_title && ebookFormData.seo_title.trim() !== "" ? ebookFormData.seo_title.trim() : null,
+        seo_description: ebookFormData.seo_description && ebookFormData.seo_description.trim() !== "" ? ebookFormData.seo_description.trim() : null,
+        seo_keywords: ebookFormData.seo_keywords && ebookFormData.seo_keywords.trim() !== "" ? ebookFormData.seo_keywords.trim() : null,
         is_published: ebookFormData.is_published,
         is_featured: ebookFormData.is_featured,
         is_vet_approved: ebookFormData.is_vet_approved,
@@ -653,43 +712,44 @@ export default function DressageSantePage() {
 
       const result = await response.json()
 
-      if (result.success) {
-        toast({
-          title: "Succès",
-          description: "Ebook créé avec succès",
-        })
-        // Réinitialiser le formulaire
-        setEbookFormData({
-          title: "",
-          excerpt: "",
-          content: "",
-          featured_image: "",
-          category_id: "",
-          subcategory_id: "",
-          species: "",
-          age_range: "",
-          difficulty_level: "",
-          reading_time: "",
-          price: "",
-          pdf_url: "",
-          seo_title: "",
-          seo_description: "",
-          seo_keywords: "",
-          is_published: false,
-          is_featured: false,
-          is_vet_approved: false,
-        })
-        setSelectedImageFile(null)
-        setSelectedPdfFile(null)
-        setShowAddEbook(false)
-        loadArticles()
-      } else {
+      if (!response.ok || !result.success) {
         toast({
           title: "Erreur",
-          description: result.error || "Impossible de créer l'ebook",
+          description: result.error || `Erreur ${response.status}: ${response.statusText}`,
           variant: "destructive",
         })
+        return
       }
+
+      toast({
+        title: "Succès",
+        description: "Ebook créé avec succès",
+      })
+      // Réinitialiser le formulaire
+      setEbookFormData({
+        title: "",
+        excerpt: "",
+        content: "",
+        featured_image: "",
+        category_id: "",
+        subcategory_id: "",
+        species: "",
+        age_range: "",
+        difficulty_level: "",
+        reading_time: "",
+        price: "",
+        pdf_url: "",
+        seo_title: "",
+        seo_description: "",
+        seo_keywords: "",
+        is_published: false,
+        is_featured: false,
+        is_vet_approved: false,
+      })
+      setSelectedImageFile(null)
+      setSelectedPdfFile(null)
+      setShowAddEbook(false)
+      loadArticles()
     } catch (error) {
       console.error("Erreur lors de la création de l'ebook:", error)
       toast({
@@ -1727,125 +1787,325 @@ export default function DressageSantePage() {
           </DialogContent>
         </Dialog>
 
-        {/* Liste des articles */}
+        {/* Liste des articles et ebooks séparés */}
+        {/* Section Articles */}
         <Card className="animate-fadeInUp" style={{ animationDelay: "0.1s" }}>
           <CardHeader>
-            <CardTitle>Articles Publiés</CardTitle>
-            <CardDescription>Gérez vos articles et ebooks</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <span className="text-red-600">📝</span>
+              Articles Publiés
+            </CardTitle>
+            <CardDescription>Gérez vos articles de blog</CardDescription>
           </CardHeader>
           <CardContent>
             {articlesLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
               </div>
-            ) : articles.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                Aucun article n'a été créé pour le moment. Créez-en un pour commencer.
+            ) : (
+              (() => {
+                const regularArticles = articles.filter((article) => !(article as any).is_ebook)
+                return regularArticles.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    Aucun article n'a été créé pour le moment. Créez-en un pour commencer.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {regularArticles.map((article) => {
+                      const category = categories.find((cat) => cat.id === article.category_id)
+                      const subcategory = category?.subcategories?.find((sub) => sub.id === article.subcategory_id)
+                      return (
+                        <div
+                          key={article.id}
+                          className="flex flex-col md:flex-row gap-4 p-4 border border-gray-200 rounded-lg hover:border-red-300 transition-colors bg-white"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <h3 className="font-semibold text-gray-900 mb-1">{article.title}</h3>
+                                <p className="text-sm text-gray-600">
+                                  {category?.name || "Sans catégorie"}
+                                  {subcategory && ` > ${subcategory.name}`}
+                                </p>
+                                {article.excerpt && (
+                                  <p className="text-sm text-gray-500 mt-2">{article.excerpt}</p>
+                                )}
+                              </div>
+                              <span
+                                className={`px-3 py-1 text-xs font-medium rounded-full ${
+                                  article.is_published ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
+                                }`}
+                              >
+                                {article.is_published ? "Publié" : "Brouillon"}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {article.species && (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                                  {article.species === "chien"
+                                    ? "Chien"
+                                    : article.species === "chat"
+                                    ? "Chat"
+                                    : article.species === "les-deux"
+                                    ? "Les deux"
+                                    : "Autre"}
+                                </span>
+                              )}
+                              {article.age_range && (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                                  {article.age_range === "chiot-chaton"
+                                    ? "Chiot/Chaton"
+                                    : article.age_range === "adulte"
+                                    ? "Adulte"
+                                    : article.age_range === "senior"
+                                    ? "Senior"
+                                    : "Tous"}
+                                </span>
+                              )}
+                              {article.difficulty_level && (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                                  {article.difficulty_level === "debutant"
+                                    ? "Débutant"
+                                    : article.difficulty_level === "intermediaire"
+                                    ? "Intermédiaire"
+                                    : "Avancé"}
+                                </span>
+                              )}
+                              {article.reading_time && (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                                  {article.reading_time} min
+                                </span>
+                              )}
+                              {article.is_featured && (
+                                <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded">
+                                  En vedette
+                                </span>
+                              )}
+                              {article.is_vet_approved && (
+                                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded">
+                                  Approuvé vétérinaire
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm">
+                                Modifier
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleDeleteArticle(article.id)}
+                              >
+                                Supprimer
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Section Ebooks */}
+        <Card className="animate-fadeInUp border-green-200 bg-gradient-to-br from-green-50 to-white" style={{ animationDelay: "0.2s" }}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span className="text-green-600">📚</span>
+              Ebooks Publiés
+            </CardTitle>
+            <CardDescription>Gérez vos ebooks et publications numériques</CardDescription>
+            {ebookColumnsExist === false && articles.length > 0 && (
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800 font-semibold mb-2">
+                  ⚠️ Les colonnes ebook ne sont pas encore configurées
+                </p>
+                <p className="text-xs text-amber-700 mb-2">
+                  Pour activer les ebooks, vous devez exécuter le script SQL suivant dans votre base de données Supabase :
+                </p>
+                <div className="bg-amber-100 p-3 rounded border border-amber-300 mb-2">
+                  <code className="text-xs text-amber-900 whitespace-pre-wrap">
+                    {`-- Exécutez ce script dans Supabase SQL Editor
+ALTER TABLE articles 
+ADD COLUMN IF NOT EXISTS pdf_url TEXT,
+ADD COLUMN IF NOT EXISTS price DECIMAL(10,2) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS is_ebook BOOLEAN DEFAULT false;`}
+                  </code>
+                </div>
+                <p className="text-xs text-amber-700">
+                  📖 Voir le fichier <code className="bg-amber-200 px-1 rounded">scripts/add-ebook-fields.sql</code> pour le script complet
+                </p>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent>
+            {articlesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
-              <div className="space-y-4">
-                {articles.map((article) => {
-                  const category = categories.find((cat) => cat.id === article.category_id)
-                  const subcategory = category?.subcategories?.find((sub) => sub.id === article.subcategory_id)
-                  return (
-                    <div
-                      key={article.id}
-                      className="flex flex-col md:flex-row gap-4 p-4 border border-gray-200 rounded-lg hover:border-red-300 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h3 className="font-semibold text-gray-900 mb-1">{article.title}</h3>
-                            <p className="text-sm text-gray-600">
-                              {category?.name || "Sans catégorie"}
-                              {subcategory &&   }
-                            </p>
-                            {article.excerpt && (
-                              <p className="text-sm text-gray-500 mt-2">{article.excerpt}</p>
-                            )}
+              (() => {
+                // Identifier les ebooks : vérifier is_ebook OU la présence de pdf_url/price
+                // (car is_ebook peut ne pas exister si les colonnes n'ont pas été ajoutées)
+                const ebooks = articles.filter((article) => {
+                  const articleAny = article as any
+                  // Méthode 1: Vérifier si is_ebook existe et est true
+                  if (articleAny.is_ebook === true) return true
+                  // Méthode 2: Vérifier si pdf_url ou price existe (caractéristiques d'un ebook)
+                  if (articleAny.pdf_url || articleAny.price) return true
+                  // Méthode 3: Vérifier si le slug ou le titre contient "ebook" (fallback)
+                  if (articleAny.slug?.toLowerCase().includes('ebook') || 
+                      articleAny.title?.toLowerCase().includes('ebook')) return true
+                  return false
+                })
+                
+                console.log("📚 Ebooks détectés:", ebooks.length, ebooks.map(e => ({ id: e.id, title: e.title, is_ebook: (e as any).is_ebook, pdf_url: (e as any).pdf_url, price: (e as any).price })))
+                
+                return ebooks.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="mb-2">Aucun ebook n'a été créé pour le moment.</p>
+                    <p className="text-sm">Publiez-en un pour commencer.</p>
+                    <p className="text-xs mt-4 text-amber-600">
+                      💡 Astuce: Si vous avez créé un ebook mais qu'il n'apparaît pas, assurez-vous d'avoir exécuté le script SQL pour ajouter les colonnes ebook.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {ebooks.map((ebook) => {
+                      const category = categories.find((cat) => cat.id === ebook.category_id)
+                      const subcategory = category?.subcategories?.find((sub) => sub.id === ebook.subcategory_id)
+                      const ebookPrice = (ebook as any).price
+                      const ebookPdfUrl = (ebook as any).pdf_url
+                      return (
+                        <div
+                          key={ebook.id}
+                          className="flex flex-col md:flex-row gap-4 p-5 border-2 border-green-300 rounded-lg hover:border-green-400 transition-colors bg-white shadow-sm"
+                        >
+                          {/* Image de couverture si disponible */}
+                          {ebook.featured_image && (
+                            <div className="md:w-32 flex-shrink-0">
+                              <img
+                                src={ebook.featured_image}
+                                alt={ebook.title}
+                                className="w-full h-40 object-cover rounded-lg border border-green-200"
+                              />
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-semibold text-gray-900">{ebook.title}</h3>
+                                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-semibold">
+                                    📚 Ebook
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-600">
+                                  {category?.name || "Sans catégorie"}
+                                  {subcategory && ` > ${subcategory.name}`}
+                                </p>
+                                {ebook.excerpt && (
+                                  <p className="text-sm text-gray-500 mt-2">{ebook.excerpt}</p>
+                                )}
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <span
+                                  className={`px-3 py-1 text-xs font-medium rounded-full ${
+                                    ebook.is_published ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
+                                  }`}
+                                >
+                                  {ebook.is_published ? "Publié" : "Brouillon"}
+                                </span>
+                                {ebookPrice && (
+                                  <span className="px-3 py-1 bg-green-600 text-white text-sm font-bold rounded-lg">
+                                    {ebookPrice}€
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {ebook.species && (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                                  {ebook.species === "chien"
+                                    ? "Chien"
+                                    : ebook.species === "chat"
+                                    ? "Chat"
+                                    : ebook.species === "les-deux"
+                                    ? "Les deux"
+                                    : "Autre"}
+                                </span>
+                              )}
+                              {ebook.age_range && (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                                  {ebook.age_range === "chiot-chaton"
+                                    ? "Chiot/Chaton"
+                                    : ebook.age_range === "adulte"
+                                    ? "Adulte"
+                                    : ebook.age_range === "senior"
+                                    ? "Senior"
+                                    : "Tous"}
+                                </span>
+                              )}
+                              {ebook.difficulty_level && (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                                  {ebook.difficulty_level === "debutant"
+                                    ? "Débutant"
+                                    : ebook.difficulty_level === "intermediaire"
+                                    ? "Intermédiaire"
+                                    : "Avancé"}
+                                </span>
+                              )}
+                              {ebook.reading_time && (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                                  {ebook.reading_time} min
+                                </span>
+                              )}
+                              {ebook.is_featured && (
+                                <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded">
+                                  En vedette
+                                </span>
+                              )}
+                              {ebook.is_vet_approved && (
+                                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded">
+                                  Approuvé vétérinaire
+                                </span>
+                              )}
+                              {ebookPdfUrl && (
+                                <a
+                                  href={ebookPdfUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <span>📄</span>
+                                  Voir le PDF
+                                </a>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm">
+                                Modifier
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleDeleteArticle(ebook.id)}
+                              >
+                                Supprimer
+                              </Button>
+                            </div>
                           </div>
-                          <span
-                            className={px-3 py-1 text-xs font-medium rounded-full }
-                          >
-                            {article.is_published ? "Publié" : "Brouillon"}
-                          </span>
                         </div>
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {article.species && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                              {article.species === "chien"
-                                ? "Chien"
-                                : article.species === "chat"
-                                ? "Chat"
-                                : article.species === "les-deux"
-                                ? "Les deux"
-                                : "Autre"}
-                            </span>
-                          )}
-                          {article.age_range && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                              {article.age_range === "chiot-chaton"
-                                ? "Chiot/Chaton"
-                                : article.age_range === "adulte"
-                                ? "Adulte"
-                                : article.age_range === "senior"
-                                ? "Senior"
-                                : "Tous"}
-                            </span>
-                          )}
-                          {article.difficulty_level && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                              {article.difficulty_level === "debutant"
-                                ? "Débutant"
-                                : article.difficulty_level === "intermediaire"
-                                ? "Intermédiaire"
-                                : "Avancé"}
-                            </span>
-                          )}
-                          {article.reading_time && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                              {article.reading_time} min
-                            </span>
-                          )}
-                          {article.is_featured && (
-                            <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded">
-                              En vedette
-                            </span>
-                          )}
-                            {article.is_vet_approved && (
-                            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded">
-                              Approuvé vétérinaire
-                            </span>
-                          )}
-                          {(article as any).is_ebook && (
-                            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-semibold">
-                               Ebook
-                            </span>
-                          )}
-                          {(article as any).price && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded font-semibold">
-                              {(article as any).price}€
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            Modifier
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleDeleteArticle(article.id)}
-                          >
-                            Supprimer
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()
             )}
           </CardContent>
         </Card>

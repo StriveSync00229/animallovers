@@ -36,11 +36,35 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   try {
     const { ArticleService } = await import("@/lib/server/article-service")
     await ArticleService.deleteCategory(params.id)
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ 
+      success: true,
+      message: "Catégorie supprimée avec succès"
+    })
   } catch (error: any) {
     console.error("Error in DELETE /api/admin/categories/[id]:", error)
-    const errorMessage = error instanceof Error ? error.message : "Erreur suppression"
-    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 })
+    
+    let errorMessage = "Erreur lors de la suppression de la catégorie"
+    let statusCode = 500
+    
+    if (error instanceof Error) {
+      errorMessage = error.message
+      
+      // Détecter les erreurs de contrainte de clé étrangère
+      if (error.message.includes("foreign key") || 
+          error.message.includes("violates foreign key constraint") ||
+          error.message.includes("23503")) {
+        statusCode = 400
+        errorMessage = "Impossible de supprimer cette catégorie car elle est utilisée par des articles. Vous devez d'abord supprimer ou déplacer les articles associés."
+      } else if (error.message.includes("utilisée par des articles")) {
+        statusCode = 400
+        // Le message est déjà explicite
+      }
+    }
+    
+    return NextResponse.json({ 
+      success: false, 
+      error: errorMessage 
+    }, { status: statusCode })
   }
 }
 

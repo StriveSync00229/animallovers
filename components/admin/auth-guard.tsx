@@ -11,11 +11,15 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    if (!isAdminAuthenticated()) {
-      router.push("/admin/login")
-    } else {
-      setIsChecking(false)
+    const checkAuth = () => {
+      if (!isAdminAuthenticated()) {
+        router.push("/admin/login")
+      } else {
+        setIsChecking(false)
+      }
     }
+    
+    checkAuth()
   }, [router])
 
   if (isChecking) {

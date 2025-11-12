@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import AdminLayoutWrapper from "@/components/admin/admin-layout-wrapper"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
 
 const donationsStats = [
   { period: "Lun", montant: 450 },
@@ -62,8 +63,226 @@ const mockCampaigns = [
 ]
 
 export default function DonPage() {
+  const { toast } = useToast()
   const [timeFilter, setTimeFilter] = useState("week")
   const [showAddCampaign, setShowAddCampaign] = useState(false)
+  const [campaigns, setCampaigns] = useState<any[]>([])
+  const [campaignsLoading, setCampaignsLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+
+  // Charger les campagnes depuis l'API
+  const loadCampaigns = async () => {
+    try {
+      setCampaignsLoading(true)
+      const response = await fetch("/api/admin/campaigns")
+      
+      if (!response.ok) {
+        console.error("Erreur lors du chargement des campagnes")
+        setCampaigns([])
+        return
+      }
+      
+      const result = await response.json()
+      
+      if (result.success && result.data) {
+        // Transformer les données pour correspondre au format d'affichage
+        const transformedCampaigns = result.data.map((campaign: any) => ({
+          id: campaign.id,
+          title: campaign.title,
+          description: campaign.description || campaign.short_description || "",
+          category: campaign.animal_type || "Autre",
+          age: campaign.animal_age || "Non spécifié",
+          goal: parseFloat(campaign.target_amount || 0),
+          raised: parseFloat(campaign.current_amount || 0),
+          image: campaign.featured_image || "/placeholder.svg?height=200&width=300",
+          active: campaign.is_active || false,
+        }))
+        setCampaigns(transformedCampaigns)
+      } else {
+        setCampaigns([])
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des campagnes:", error)
+      setCampaigns([])
+    } finally {
+      setCampaignsLoading(false)
+    }
+  }
+
+  // Charger les campagnes au montage du composant
+  useEffect(() => {
+    loadCampaigns()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+
+  // Formulaire de création de campagne
+  const [campaignFormData, setCampaignFormData] = useState({
+    title: "",
+    object: "",
+    description: "",
+    category: "none",
+    age: "none",
+    target_amount: "",
+    featured_image: "",
+  })
+
+  // Réinitialiser le formulaire
+  const resetForm = () => {
+    setCampaignFormData({
+      title: "",
+      object: "",
+      description: "",
+      category: "none",
+      age: "none",
+      target_amount: "",
+      featured_image: "",
+    })
+    setImagePreview(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  // Gérer l'upload d'image
+  const handleImageUpload = async (file: File) => {
+    try {
+      setUploadingImage(true)
+      
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("folder", "campaigns/images")
+      formData.append("type", "image")
+
+      const response = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setCampaignFormData({
+          ...campaignFormData,
+          featured_image: result.data.url,
+        })
+        setImagePreview(result.data.url)
+        toast({
+          title: "Succès",
+          description: "Image uploadée avec succès",
+        })
+      } else {
+        toast({
+          title: "Erreur",
+          description: result.error || "Erreur lors de l'upload de l'image",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'upload de l'image:", error)
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de l'upload de l'image",
+        variant: "destructive",
+      })
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  // Gérer le changement de fichier
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.type.startsWith("image/")) {
+        handleImageUpload(file)
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Veuillez sélectionner une image",
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+  // Créer une campagne
+  const handleCreateCampaign = async () => {
+    try {
+      if (!campaignFormData.title.trim()) {
+        toast({
+          title: "Erreur",
+          description: "Le titre de la campagne est requis",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!campaignFormData.target_amount || parseFloat(campaignFormData.target_amount) <= 0) {
+        toast({
+          title: "Erreur",
+          description: "Le montant cible doit être supérieur à 0",
+          variant: "destructive",
+        })
+        return
+      }
+
+      setLoading(true)
+
+      const response = await fetch("/api/admin/campaigns", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: campaignFormData.title,
+          object: campaignFormData.object,
+          description: campaignFormData.description,
+          animal_type: campaignFormData.category !== "none" ? campaignFormData.category : null,
+          animal_age: campaignFormData.age !== "none" ? campaignFormData.age : null,
+          target_amount: campaignFormData.target_amount,
+          featured_image: campaignFormData.featured_image || null,
+          is_active: true,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "Succès",
+          description: "Campagne créée avec succès",
+        })
+        setShowAddCampaign(false)
+        resetForm()
+        // Recharger les campagnes
+        loadCampaigns()
+      } else {
+        toast({
+          title: "Erreur",
+          description: result.error || "Impossible de créer la campagne",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Erreur lors de la création de la campagne:", error)
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la création de la campagne",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Charger les campagnes au montage du composant
+  useEffect(() => {
+    loadCampaigns()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <AdminLayoutWrapper title="Gestion des Dons">
@@ -174,9 +393,19 @@ export default function DonPage() {
         {/* Campaigns Management */}
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">Campagnes de Don</h2>
-          <Dialog open={showAddCampaign} onOpenChange={setShowAddCampaign}>
+          <Dialog
+            open={showAddCampaign}
+            onOpenChange={(open) => {
+              setShowAddCampaign(open)
+              if (!open) {
+                resetForm()
+              }
+            }}
+          >
             <DialogTrigger asChild>
-              <Button className="bg-red-600 hover:bg-red-700">Créer une Campagne</Button>
+              <Button className="bg-red-600 hover:bg-red-700" onClick={resetForm}>
+                Créer une Campagne
+              </Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
@@ -186,37 +415,149 @@ export default function DonPage() {
               <div className="space-y-6 py-4">
                 {/* Media */}
                 <div className="space-y-2">
-                  <Label>Image ou Vidéo</Label>
-                  <Input type="file" accept="image/*,video/*" />
+                  <Label>Image</Label>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingImage}
+                        className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {uploadingImage ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                            Upload en cours...
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              className="w-4 h-4 mr-2"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                              />
+                            </svg>
+                            Choisir une image
+                          </>
+                        )}
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        disabled={uploadingImage}
+                        className="hidden"
+                      />
+                      <span className="text-sm text-gray-500">ou</span>
+                    </div>
+
+                    {/* Aperçu de l'image */}
+                    {imagePreview && (
+                      <div className="relative w-full h-48 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                        <img
+                          src={imagePreview}
+                          alt="Aperçu"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImagePreview(null)
+                            setCampaignFormData({ ...campaignFormData, featured_image: "" })
+                          }}
+                          className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Champ URL (optionnel) */}
+                    <div className="space-y-2">
+                      <Label className="text-sm text-gray-500">Ou entrez une URL d'image</Label>
+                      <Input
+                        type="url"
+                        placeholder="https://example.com/image.jpg"
+                        value={campaignFormData.featured_image}
+                        onChange={(e) => {
+                          setCampaignFormData({ ...campaignFormData, featured_image: e.target.value })
+                          if (e.target.value) {
+                            setImagePreview(e.target.value)
+                          } else {
+                            setImagePreview(null)
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Title */}
                 <div className="space-y-2">
-                  <Label>Titre de la campagne</Label>
-                  <Input placeholder="Ex: Sauvetage de Max" />
+                  <Label>Titre de la campagne *</Label>
+                  <Input
+                    placeholder="Ex: Sauvetage de Max"
+                    value={campaignFormData.title}
+                    onChange={(e) => setCampaignFormData({ ...campaignFormData, title: e.target.value })}
+                  />
                 </div>
 
                 {/* Object */}
                 <div className="space-y-2">
                   <Label>Objet</Label>
-                  <Input placeholder="Ex: Opération chirurgicale" />
+                  <Input
+                    placeholder="Ex: Opération chirurgicale"
+                    value={campaignFormData.object}
+                    onChange={(e) => setCampaignFormData({ ...campaignFormData, object: e.target.value })}
+                  />
                 </div>
 
                 {/* Description */}
                 <div className="space-y-2">
                   <Label>Description</Label>
-                  <Textarea placeholder="Décrivez la campagne en détail..." rows={5} />
+                  <Textarea
+                    placeholder="Décrivez la campagne en détail..."
+                    rows={5}
+                    value={campaignFormData.description}
+                    onChange={(e) => setCampaignFormData({ ...campaignFormData, description: e.target.value })}
+                  />
                 </div>
 
                 {/* Category & Age */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Catégorie</Label>
-                    <Select>
+                    <Select
+                      value={campaignFormData.category}
+                      onValueChange={(value) => setCampaignFormData({ ...campaignFormData, category: value })}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Choisir" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">Aucune</SelectItem>
                         <SelectItem value="chien">Chien</SelectItem>
                         <SelectItem value="chat">Chat</SelectItem>
                       </SelectContent>
@@ -224,11 +565,15 @@ export default function DonPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Tranche d'âge</Label>
-                    <Select>
+                    <Select
+                      value={campaignFormData.age}
+                      onValueChange={(value) => setCampaignFormData({ ...campaignFormData, age: value })}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Choisir" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">Aucune</SelectItem>
                         <SelectItem value="chiot">Chiot</SelectItem>
                         <SelectItem value="chaton">Chaton</SelectItem>
                         <SelectItem value="adulte">Adulte</SelectItem>
@@ -240,11 +585,23 @@ export default function DonPage() {
 
                 {/* Goal Amount */}
                 <div className="space-y-2">
-                  <Label>Montant de collecte à atteindre (€)</Label>
-                  <Input type="number" placeholder="5000" />
+                  <Label>Montant de collecte à atteindre (€) *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="5000"
+                    value={campaignFormData.target_amount}
+                    onChange={(e) => setCampaignFormData({ ...campaignFormData, target_amount: e.target.value })}
+                  />
                 </div>
 
-                <Button className="w-full bg-red-600 hover:bg-red-700">Créer la campagne</Button>
+                <Button
+                  className="w-full bg-red-600 hover:bg-red-700"
+                  onClick={handleCreateCampaign}
+                  disabled={loading}
+                >
+                  {loading ? "Création en cours..." : "Créer la campagne"}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -252,7 +609,16 @@ export default function DonPage() {
 
         {/* Active Campaigns */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {mockCampaigns.map((campaign, idx) => (
+          {campaignsLoading ? (
+            <div className="col-span-2 flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : campaigns.length === 0 ? (
+            <div className="col-span-2 text-center py-12 text-gray-500">
+              Aucune campagne n'a été créée pour le moment. Créez-en une pour commencer.
+            </div>
+          ) : (
+            campaigns.map((campaign, idx) => (
             <Card key={campaign.id} className="animate-fadeInUp" style={{ animationDelay: `${0.6 + idx * 0.1}s` }}>
               <CardContent className="p-0">
                 <img
@@ -298,7 +664,8 @@ export default function DonPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </AdminLayoutWrapper>

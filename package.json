@@ -6,7 +6,8 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "setup:products-storage": "node scripts/setup-products-storage-complete.js"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",

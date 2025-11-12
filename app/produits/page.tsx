@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import Image from "next/image"
-import { getProductCategories } from "@/lib/server/product-service"
+import { getProductCategories, getFeaturedProducts } from "@/lib/server/product-service"
+import ProductImage from "@/components/products/product-image"
 
 export const metadata: Metadata = {
   title: "Produits recommandés pour chiens et chats | AnimalLovers",
@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 
 export default async function ProductsPage() {
   const categories = await getProductCategories()
+  const featuredProducts = await getFeaturedProducts(6)
 
   return (
     <main className="pb-16">
@@ -167,102 +168,101 @@ export default async function ProductsPage() {
         <div className="container px-4 mx-auto">
           <h2 className="mb-8 text-3xl font-bold text-center text-gray-800">Produits populaires</h2>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Featured Product 1 */}
-            <Link
-              href="/produits/chiens/couchage-confort/panier-orthopedique-chien-grand"
-              className="overflow-hidden transition-transform bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:translate-y-[-4px]"
-            >
-              <div className="relative w-full h-48">
-                <Image
-                  src="https://images.unsplash.com/photo-1541599468348-e96984315921?q=80&w=1470&auto=format&fit=crop"
-                  alt="Panier orthopédique pour chien"
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute top-0 right-0 px-2 py-1 text-xs font-bold text-white bg-rose-500">
-                  BEST-SELLER
-                </div>
-              </div>
-              <div className="p-4">
-                <h3 className="mb-2 text-lg font-semibold text-gray-800">
-                  Panier orthopédique pour chien - Grand gabarit
-                </h3>
-                <p className="mb-2 text-sm text-gray-600 line-clamp-2">
-                  Idéal pour les grands chiens et les seniors souffrant d'arthrose.
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-rose-600">49,90€</span>
-                  <span className="text-sm text-gray-500">⭐⭐⭐⭐½</span>
-                </div>
-              </div>
-            </Link>
+          {featuredProducts.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <p className="mb-2">Aucun produit populaire pour le moment.</p>
+              <p className="text-sm">Revenez bientôt pour découvrir nos produits.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {featuredProducts.map((product) => {
+                  const getProductUrl = () => {
+                    if (product.product_categories?.slug) {
+                      const speciesSlug = product.species === "chien" ? "chiens" : product.species === "chat" ? "chats" : "mixtes"
+                      return `/produits/${speciesSlug}/${product.product_categories.slug}/${product.slug}`
+                    }
+                    return `/produits/${product.slug}`
+                  }
 
-            {/* Featured Product 2 */}
-            <Link
-              href="/produits/chats/jouets-divertissement/arbre-chat-luxe"
-              className="overflow-hidden transition-transform bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:translate-y-[-4px]"
-            >
-              <div className="relative w-full h-48">
-                <Image
-                  src="https://images.unsplash.com/photo-1526336024174-e58f5cdd8e13?q=80&w=1374&auto=format&fit=crop"
-                  alt="Arbre à chat luxe multi-niveaux"
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute top-0 right-0 px-2 py-1 text-xs font-bold text-white bg-amber-500">
-                  PROMO -15%
-                </div>
-              </div>
-              <div className="p-4">
-                <h3 className="mb-2 text-lg font-semibold text-gray-800">Arbre à chat luxe multi-niveaux</h3>
-                <p className="mb-2 text-sm text-gray-600 line-clamp-2">
-                  Structure robuste avec griffoirs, cachettes et plateformes d'observation.
-                </p>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="font-bold text-rose-600">84,90€</span>
-                    <span className="ml-2 text-sm text-gray-500 line-through">99,90€</span>
-                  </div>
-                  <span className="text-sm text-gray-500">⭐⭐⭐⭐⭐</span>
-                </div>
-              </div>
-            </Link>
 
-            {/* Featured Product 3 */}
-            <Link
-              href="/produits/mixtes/accessoires-maison/aspirateur-poils-animaux"
-              className="overflow-hidden transition-transform bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:translate-y-[-4px]"
-            >
-              <div className="relative w-full h-48">
-                <Image
-                  src="https://images.unsplash.com/photo-1558317374-067fb5f30001?q=80&w=1470&auto=format&fit=crop"
-                  alt="Aspirateur spécial poils d'animaux"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="p-4">
-                <h3 className="mb-2 text-lg font-semibold text-gray-800">Aspirateur spécial poils d'animaux</h3>
-                <p className="mb-2 text-sm text-gray-600 line-clamp-2">
-                  Puissant et efficace contre les poils d'animaux sur tous types de surfaces.
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-rose-600">129,90€</span>
-                  <span className="text-sm text-gray-500">⭐⭐⭐⭐</span>
-                </div>
-              </div>
-            </Link>
-          </div>
+                  const getBadge = () => {
+                    if (product.is_bestseller) return { text: "BEST-SELLER", color: "bg-rose-500" }
+                    if (product.is_new) return { text: "NOUVEAU", color: "bg-green-500" }
+                    if (product.original_price && product.original_price > product.price) {
+                      const discount = Math.round(((product.original_price - product.price) / product.original_price) * 100)
+                      return { text: `PROMO -${discount}%`, color: "bg-amber-500" }
+                    }
+                    return null
+                  }
 
-          <div className="mt-8 text-center">
-            <Link
-              href="/produits/populaires"
-              className="inline-flex items-center px-6 py-3 font-medium text-white transition-colors bg-rose-500 rounded-md hover:bg-rose-600"
-            >
-              Voir tous les produits populaires
-            </Link>
-          </div>
+                  const badge = getBadge()
+                  const discountPercentage =
+                    product.original_price && product.original_price > product.price
+                      ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
+                      : null
+
+                  return (
+                    <Link
+                      key={product.id}
+                      href={getProductUrl()}
+                      className="overflow-hidden transition-transform bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:translate-y-[-4px]"
+                    >
+                      <div className="relative w-full h-48 bg-gray-100">
+                        <ProductImage
+                          src={product.featured_image}
+                          alt={product.name || "Produit"}
+                          fill
+                          className="object-cover"
+                        />
+                        {badge && (
+                          <div className={`absolute top-0 right-0 px-2 py-1 text-xs font-bold text-white ${badge.color} z-10`}>
+                            {badge.text}
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="mb-2 text-lg font-semibold text-gray-800 line-clamp-2">
+                          {product.name}
+                        </h3>
+                        {product.description && (
+                          <p className="mb-2 text-sm text-gray-600 line-clamp-2">{product.description}</p>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-rose-600">{product.price.toFixed(2)}€</span>
+                            {product.original_price && product.original_price > product.price && (
+                              <span className="text-sm text-gray-500 line-through">
+                                {product.original_price.toFixed(2)}€
+                              </span>
+                            )}
+                          </div>
+                          {product.review_count > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm text-gray-500">⭐</span>
+                              <span className="text-sm font-medium text-gray-700">
+                                {product.rating_average.toFixed(1)}
+                              </span>
+                              <span className="text-xs text-gray-500">({product.review_count})</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+
+              <div className="mt-8 text-center">
+                <Link
+                  href="/produits/catalogue"
+                  className="inline-flex items-center px-6 py-3 font-medium text-white transition-colors bg-rose-500 rounded-md hover:bg-rose-600"
+                >
+                  Voir tous les produits
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 

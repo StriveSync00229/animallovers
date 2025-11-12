@@ -1,18 +1,29 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { PawPrint, ArrowRight } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 
+interface PreviewAnimal {
+  id: string
+  name: string
+  type: "chien" | "chat" | "autre"
+  typeLabel: string
+  breed: string
+  age: string
+  image: string
+}
+
 // Données fictives pour la prévisualisation
-const previewAnimals = [
+const fallbackPreviewAnimals: PreviewAnimal[] = [
   {
     id: 1,
     name: "Max",
-    type: "Chien",
+    type: "chien",
+    typeLabel: "Chien",
     breed: "Golden Retriever",
     age: "2 ans",
     image: "https://images.unsplash.com/photo-1552053831-71594a27632d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
@@ -20,7 +31,8 @@ const previewAnimals = [
   {
     id: 2,
     name: "Luna",
-    type: "Chat",
+    type: "chat",
+    typeLabel: "Chat",
     breed: "Siamois",
     age: "1 an",
     image:
@@ -29,7 +41,8 @@ const previewAnimals = [
   {
     id: 3,
     name: "Rocky",
-    type: "Chien",
+    type: "chien",
+    typeLabel: "Chien",
     breed: "Berger Allemand",
     age: "3 ans",
     image:
@@ -38,7 +51,8 @@ const previewAnimals = [
   {
     id: 4,
     name: "Mia",
-    type: "Chat",
+    type: "chat",
+    typeLabel: "Chat",
     breed: "Maine Coon",
     age: "2 ans",
     image: "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
@@ -47,9 +61,71 @@ const previewAnimals = [
 
 const AdoptionPreview = () => {
   const [filter, setFilter] = useState("all")
+  const [animals, setAnimals] = useState<PreviewAnimal[]>(fallbackPreviewAnimals)
+  const [loading, setLoading] = useState(true)
+
+  const formatTypeLabel = (type: string | null) => {
+    switch (type) {
+      case "chien":
+      case "Chien":
+        return "Chien"
+      case "chat":
+      case "Chat":
+        return "Chat"
+      default:
+        return "Autre"
+    }
+  }
+
+  useEffect(() => {
+    const loadAnimals = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("/api/adoption-animals?limit=8")
+        if (!response.ok) {
+          console.error("Erreur lors du chargement des animaux pour l'aperçu")
+          setAnimals(fallbackPreviewAnimals)
+          return
+        }
+
+        const result = await response.json()
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+          const mapped: PreviewAnimal[] = result.data.map((animal: any) => ({
+            id: animal.id,
+            name: animal.name,
+            type: (animal.category || "autre") as "chien" | "chat" | "autre",
+            typeLabel: formatTypeLabel(animal.category),
+            breed: animal.breed || "Race non renseignée",
+            age: animal.ageRange || "Âge à définir",
+            image: animal.image || "/placeholder.svg?height=300&width=300",
+          }))
+          setAnimals(mapped)
+        } else {
+          setAnimals(fallbackPreviewAnimals)
+        }
+      } catch (error) {
+        console.error("Erreur inattendue lors du chargement des animaux:", error)
+        setAnimals(fallbackPreviewAnimals)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadAnimals()
+  }, [])
 
   const filteredAnimals =
-    filter === "all" ? previewAnimals : previewAnimals.filter((animal) => animal.type.toLowerCase() === filter)
+    filter === "all" ? animals : animals.filter((animal) => animal.type === filter)
+
+  if (loading) {
+    return (
+      <section className="py-16 bg-gray-50 md:py-24">
+        <div className="container px-4 mx-auto flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className="py-16 bg-gray-50 md:py-24">
@@ -108,7 +184,7 @@ const AdoptionPreview = () => {
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xl font-semibold">{animal.name}</h3>
                   <span className="px-2 py-1 text-xs font-medium text-rose-700 bg-rose-100 rounded-full">
-                    {animal.type}
+                    {animal.typeLabel}
                   </span>
                 </div>
                 <p className="text-sm text-gray-600">

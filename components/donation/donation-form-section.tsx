@@ -17,11 +17,9 @@ import {
   Siren,
   Target,
   Lock,
-  DollarSignIcon as PaypalLogo,
   ArrowRight,
   ArrowLeft,
 } from "lucide-react"
-import Image from "next/image"
 
 // Messages pour les montants
 const amountMessages = {
@@ -44,11 +42,14 @@ const DonationFormSection = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
 
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card")
-  const [cardName, setCardName] = useState("")
+  const [campaignId, setCampaignId] = useState<string | null>(null)
+  
+  // Données de carte bancaire
   const [cardNumber, setCardNumber] = useState("")
-  const [expiryDate, setExpiryDate] = useState("")
-  const [cvc, setCvc] = useState("")
+  const [cardExpiryMonth, setCardExpiryMonth] = useState("")
+  const [cardExpiryYear, setCardExpiryYear] = useState("")
+  const [cardCvv, setCardCvv] = useState("")
+  const [cardholderName, setCardholderName] = useState("")
   const [saveCard, setSaveCard] = useState(false)
 
   const handleNextStep = () => {
@@ -81,13 +82,68 @@ const DonationFormSection = () => {
     }
   }
 
-  const handleSubmit = async (paymentMethod: "card" | "paypal") => {
+  const handleSubmit = async () => {
+    const finalAmount = amount === "other" ? customAmount : amount
+    
+    // Validation
+    if (!finalAmount || Number.parseFloat(finalAmount) <= 0) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez entrer un montant valide.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!email) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez entrer votre adresse email.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv || !cardholderName) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir toutes les informations de carte bancaire.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsSubmitting(true)
 
-    // Simulation d'un traitement de paiement
     try {
-      // Ici, vous intégreriez votre logique de paiement réelle avec Stripe ou PayPal
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      // Envoyer les données au serveur pour traitement
+      const response = await fetch("/api/donations/process-card-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: finalAmount,
+          cardNumber: cardNumber.replace(/\s/g, ""),
+          cardExpiryMonth,
+          cardExpiryYear,
+          cardCvv,
+          cardholderName,
+          email,
+          firstName,
+          lastName: "", // Si vous avez un champ lastName
+          cause,
+          campaignId,
+          isMonthly,
+          message,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.message || "Erreur lors du traitement du paiement")
+      }
 
       toast({
         title: "Merci pour votre don !",
@@ -96,11 +152,14 @@ const DonationFormSection = () => {
       })
 
       // Redirection vers la page de remerciement
-      window.location.href = "/merci-pour-votre-don"
-    } catch (error) {
+      setTimeout(() => {
+        window.location.href = "/merci-pour-votre-don"
+      }, 1500)
+    } catch (error: any) {
+      console.error("Erreur lors du paiement:", error)
       toast({
         title: "Erreur de paiement",
-        description: "Une erreur est survenue lors du traitement de votre paiement. Veuillez réessayer.",
+        description: error.message || "Une erreur est survenue lors du traitement de votre paiement. Veuillez réessayer.",
         variant: "destructive",
       })
     } finally {
@@ -399,163 +458,146 @@ const DonationFormSection = () => {
                   </div>
 
                   <div className="space-y-6">
-                    <div className="flex items-center space-x-4">
-                      <button
-                        onClick={() => setPaymentMethod("card")}
-                        className={`flex items-center justify-center w-1/2 p-3 border rounded-lg ${
-                          paymentMethod === "card" ? "border-rose-500 bg-rose-50" : "border-gray-200"
-                        }`}
-                      >
-                        <CreditCard
-                          className={`w-5 h-5 mr-2 ${paymentMethod === "card" ? "text-rose-500" : "text-gray-500"}`}
-                        />
-                        <span className={paymentMethod === "card" ? "text-rose-500 font-medium" : "text-gray-500"}>
-                          Carte bancaire
-                        </span>
-                      </button>
-                      <button
-                        onClick={() => setPaymentMethod("paypal")}
-                        className={`flex items-center justify-center w-1/2 p-3 border rounded-lg ${
-                          paymentMethod === "paypal" ? "border-rose-500 bg-rose-50" : "border-gray-200"
-                        }`}
-                      >
-                        <PaypalLogo
-                          className={`w-5 h-5 mr-2 ${paymentMethod === "paypal" ? "text-rose-500" : "text-gray-500"}`}
-                        />
-                        <span className={paymentMethod === "paypal" ? "text-rose-500 font-medium" : "text-gray-500"}>
-                          PayPal
-                        </span>
-                      </button>
+                    <div className="p-4 text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="font-semibold text-blue-900 mb-1">Paiement sécurisé avec KKiaPay</p>
+                      <p>Vos informations de carte sont traitées de manière sécurisée et ne sont jamais stockées complètement.</p>
                     </div>
 
-                    {paymentMethod === "card" && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="space-y-4 p-4 border rounded-lg"
-                      >
-                        <div className="space-y-2">
-                          <Label htmlFor="cardName" className="text-gray-700">
-                            Nom du titulaire <span className="text-rose-500">*</span>
-                          </Label>
-                          <Input
-                            id="cardName"
-                            type="text"
-                            placeholder="Nom sur la carte"
-                            value={cardName}
-                            onChange={(e) => setCardName(e.target.value)}
-                            required
-                          />
-                        </div>
+                    {/* Formulaire de carte bancaire */}
+                    <form
+                      autoComplete="on"
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        handleSubmit()
+                      }}
+                      className="space-y-4 p-4 border rounded-lg bg-gray-50"
+                    >
+                      <div className="space-y-2">
+                        <Label htmlFor="cardholderName" className="text-gray-700">
+                          Nom du titulaire de la carte <span className="text-rose-500">*</span>
+                        </Label>
+                        <Input
+                          id="cardholderName"
+                          name="cardholderName"
+                          type="text"
+                          autoComplete="cc-name"
+                          placeholder="Nom tel qu'il apparaît sur la carte"
+                          value={cardholderName}
+                          onChange={(e) => setCardholderName(e.target.value)}
+                          required
+                        />
+                      </div>
 
+                      <div className="space-y-2">
+                        <Label htmlFor="cardNumber" className="text-gray-700">
+                          Numéro de carte <span className="text-rose-500">*</span>
+                        </Label>
+                        <Input
+                          id="cardNumber"
+                          name="cardNumber"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="cc-number"
+                          placeholder="1234 5678 9012 3456"
+                          value={cardNumber}
+                          onChange={(e) => {
+                            // Formater le numéro de carte avec des espaces tous les 4 chiffres
+                            const value = e.target.value.replace(/\D/g, "").substring(0, 16)
+                            const formattedValue = value.replace(/(\d{4})(?=\d)/g, "$1 ")
+                            setCardNumber(formattedValue)
+                          }}
+                          required
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="cardNumber" className="text-gray-700">
-                            Numéro de carte <span className="text-rose-500">*</span>
+                          <Label htmlFor="cardExpiryMonth" className="text-gray-700">
+                            Mois <span className="text-rose-500">*</span>
                           </Label>
                           <Input
-                            id="cardNumber"
+                            id="cardExpiryMonth"
+                            name="cardExpiryMonth"
                             type="text"
-                            placeholder="1234 5678 9012 3456"
-                            value={cardNumber}
+                            inputMode="numeric"
+                            autoComplete="cc-exp-month"
+                            placeholder="MM"
+                            maxLength={2}
+                            value={cardExpiryMonth}
                             onChange={(e) => {
-                              // Limiter à 16 chiffres et ajouter des espaces tous les 4 chiffres
-                              const value = e.target.value.replace(/\D/g, "").substring(0, 16)
-                              const formattedValue = value.replace(/(\d{4})(?=\d)/g, "$1 ")
-                              setCardNumber(formattedValue)
+                              const value = e.target.value.replace(/\D/g, "").substring(0, 2)
+                              if (value === "" || (Number.parseInt(value) >= 1 && Number.parseInt(value) <= 12)) {
+                                setCardExpiryMonth(value)
+                              }
                             }}
                             required
                           />
                         </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="expiryDate" className="text-gray-700">
-                              Date d'expiration <span className="text-rose-500">*</span>
-                            </Label>
-                            <Input
-                              id="expiryDate"
-                              type="text"
-                              placeholder="MM/AA"
-                              value={expiryDate}
-                              onChange={(e) => {
-                                // Formater la date d'expiration (MM/AA)
-                                const value = e.target.value.replace(/\D/g, "").substring(0, 4)
-                                if (value.length > 2) {
-                                  setExpiryDate(`${value.substring(0, 2)}/${value.substring(2)}`)
-                                } else {
-                                  setExpiryDate(value)
-                                }
-                              }}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="cvc" className="text-gray-700">
-                              Code de sécurité <span className="text-rose-500">*</span>
-                            </Label>
-                            <Input
-                              id="cvc"
-                              type="text"
-                              placeholder="CVC"
-                              value={cvc}
-                              onChange={(e) => {
-                                // Limiter à 3-4 chiffres
-                                const value = e.target.value.replace(/\D/g, "").substring(0, 4)
-                                setCvc(value)
-                              }}
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="saveCard"
-                            checked={saveCard}
-                            onCheckedChange={(checked) => setSaveCard(!!checked)}
-                          />
-                          <Label htmlFor="saveCard" className="text-gray-700">
-                            Enregistrer ma carte pour mes prochains dons
+                        <div className="space-y-2">
+                          <Label htmlFor="cardExpiryYear" className="text-gray-700">
+                            Année <span className="text-rose-500">*</span>
                           </Label>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {paymentMethod === "paypal" && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="p-4 text-center border rounded-lg"
-                      >
-                        <p className="mb-4 text-gray-600">
-                          Vous allez être redirigé vers PayPal pour finaliser votre paiement en toute sécurité.
-                        </p>
-                        <div className="flex justify-center">
-                          <Image
-                            src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg"
-                            alt="PayPal"
-                            width={111}
-                            height={69}
+                          <Input
+                            id="cardExpiryYear"
+                            name="cardExpiryYear"
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="cc-exp-year"
+                            placeholder="AAAA"
+                            maxLength={4}
+                            value={cardExpiryYear}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, "").substring(0, 4)
+                              setCardExpiryYear(value)
+                            }}
+                            required
                           />
                         </div>
-                      </motion.div>
-                    )}
+                        <div className="space-y-2">
+                          <Label htmlFor="cardCvv" className="text-gray-700">
+                            CVV <span className="text-rose-500">*</span>
+                          </Label>
+                          <Input
+                            id="cardCvv"
+                            name="cardCvv"
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="cc-csc"
+                            placeholder="123"
+                            maxLength={4}
+                            value={cardCvv}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, "").substring(0, 4)
+                              setCardCvv(value)
+                            }}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="saveCard"
+                          checked={saveCard}
+                          onCheckedChange={(checked) => setSaveCard(!!checked)}
+                        />
+                        <Label htmlFor="saveCard" className="text-gray-700 text-sm">
+                          Enregistrer cette carte pour mes prochains dons (toutes les informations seront stockées)
+                        </Label>
+                      </div>
+                    </form>
 
                     <Button
-                      onClick={() => handleSubmit(paymentMethod)}
-                      disabled={
-                        isSubmitting || (paymentMethod === "card" && (!cardName || !cardNumber || !expiryDate || !cvc))
-                      }
+                      onClick={handleSubmit}
+                      disabled={isSubmitting}
                       className="w-full bg-rose-500 hover:bg-rose-600 h-14"
                     >
                       {isSubmitting ? (
-                        "Traitement en cours..."
+                        "Traitement du paiement..."
                       ) : (
                         <>
                           <Lock className="w-5 h-5 mr-2" />
-                          {paymentMethod === "card" ? "Payer par carte bancaire" : "Payer avec PayPal"}
+                          Payer {amount === "other" ? customAmount : amount}€
                         </>
                       )}
                     </Button>

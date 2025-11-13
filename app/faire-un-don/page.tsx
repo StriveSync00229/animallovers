@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import DonationBanner from "@/components/donation/donation-banner"
 import WhyDonateSection from "@/components/donation/why-donate-section"
 import DonationFormSection from "@/components/donation/donation-form-section"
+import { RealtimeDonationStats } from "@/components/donation/realtime-donation-stats"
 import TestimonialsSection from "@/components/donation/testimonials-section"
 import TransparencySection from "@/components/donation/transparency-section"
 import NewsletterSection from "@/components/donation/newsletter-section"
@@ -17,6 +18,16 @@ export default function DonationPage() {
     <main className="flex flex-col min-h-screen">
       <DonationBanner />
       <WhyDonateSection />
+      <section className="py-12 bg-gray-50">
+        <div className="container px-4 mx-auto">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
+              Impact de vos dons en temps réel
+            </h2>
+            <RealtimeDonationStats />
+          </div>
+        </div>
+      </section>
       <DonationFormSection />
       <TestimonialsSection />
       <TransparencySection />

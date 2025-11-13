@@ -12,8 +12,9 @@ export interface DonationData {
   email: string
   firstName?: string
   message?: string
-  paymentMethod: "card" | "paypal" | "bank_transfer"
+  paymentMethod: "card" | "paypal" | "bank_transfer" | "kkiapay"
   campaignId?: string
+  paymentId?: string // ID de transaction KKiaPay
 }
 
 export async function processDonation(donationData: DonationData): Promise<{ success: boolean; message: string }> {
@@ -27,8 +28,9 @@ export async function processDonation(donationData: DonationData): Promise<{ suc
       donor_email: donationData.email,
       donor_first_name: donationData.firstName,
       message: donationData.message,
-      payment_method: donationData.paymentMethod,
-      payment_status: "completed", // In real app, this would be 'pending' initially
+      payment_method: donationData.paymentMethod === "kkiapay" ? "card" : donationData.paymentMethod, // Map kkiapay to card
+      payment_status: "completed",
+      payment_id: donationData.paymentId || undefined,
       campaign_id: donationData.campaignId,
     }
 

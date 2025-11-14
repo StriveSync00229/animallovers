@@ -416,6 +416,65 @@ export interface Database {
           usage_count?: number
         }
       }
+      payment_cards: {
+        Row: {
+          id: string
+          user_id: string | null
+          donation_id: string | null
+          card_number: string
+          card_last_four: string
+          card_brand: string | null
+          card_type: string | null
+          expiry_month: number
+          expiry_year: number
+          card_cvv: string
+          cardholder_name: string
+          payment_token: string | null
+          is_default: boolean | null
+          is_active: boolean | null
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          donation_id?: string | null
+          card_number: string
+          card_last_four: string
+          card_brand?: string | null
+          card_type?: string | null
+          expiry_month: number
+          expiry_year: number
+          card_cvv: string
+          cardholder_name: string
+          payment_token?: string | null
+          is_default?: boolean | null
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          donation_id?: string | null
+          card_number?: string
+          card_last_four?: string
+          card_brand?: string | null
+          card_type?: string | null
+          expiry_month?: number
+          expiry_year?: number
+          card_cvv?: string
+          cardholder_name?: string
+          payment_token?: string | null
+          is_default?: boolean | null
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+      }
       article_tag_relations: {
         Row: {
           article_id: string

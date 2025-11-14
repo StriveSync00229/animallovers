@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import AdminLayoutWrapper from "@/components/admin/admin-layout-wrapper"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -19,48 +19,163 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import { createClient } from "@/lib/supabase/client"
 
-const donationsStats = [
-  { period: "Lun", montant: 450 },
-  { period: "Mar", montant: 680 },
-  { period: "Mer", montant: 520 },
-  { period: "Jeu", montant: 890 },
-  { period: "Ven", montant: 750 },
-  { period: "Sam", montant: 1200 },
-  { period: "Dim", montant: 980 },
-]
+const currencyFormatter = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
 
-const recentDonations = [
-  { id: 1, donor: "Marie Dupont", email: "marie@email.com", amount: 50, date: "2025-01-20", time: "14:30" },
-  { id: 2, donor: "Jean Martin", email: "jean@email.com", amount: 100, date: "2025-01-20", time: "12:15" },
-  { id: 3, donor: "Sophie Bernard", email: "sophie@email.com", amount: 25, date: "2025-01-19", time: "18:45" },
-  { id: 4, donor: "Pierre Leroy", email: "pierre@email.com", amount: 75, date: "2025-01-19", time: "10:20" },
-]
+const formatCurrency = (value: number) => currencyFormatter.format(value || 0)
 
-const mockCampaigns = [
-  {
-    id: 1,
-    title: "Sauvetage de Max",
-    description: "Opération chirurgicale urgente pour Max, un golden retriever abandonné",
-    category: "Chien",
-    age: "Adulte",
-    goal: 5000,
-    raised: 3250,
-    image: "/placeholder.svg?height=200&width=300",
-    active: true,
-  },
-  {
-    id: 2,
-    title: "Refuge pour chatons",
-    description: "Construction d'un nouvel espace pour accueillir les chatons abandonnés",
-    category: "Chat",
-    age: "Chaton",
-    goal: 10000,
-    raised: 7800,
-    image: "/placeholder.svg?height=200&width=300",
-    active: true,
-  },
-]
+const defaultDonationStats = {
+  total: 0,
+  thisWeek: 0,
+  thisWeekCount: 0,
+  today: 0,
+  todayCount: 0,
+  average: 0,
+}
+
+type DonationRecord = {
+  id: string
+  amount: number
+  donor_email: string | null
+  donor_first_name: string | null
+  created_at: string
+}
+
+type ChartPoint = {
+  period: string
+  montant: number
+}
+
+const getStartOfDay = (date: Date) => {
+  const start = new Date(date)
+  start.setHours(0, 0, 0, 0)
+  return start
+}
+
+const getStartOfWeek = (date: Date) => {
+  const start = getStartOfDay(date)
+  const day = start.getDay()
+  const diff = (day + 6) % 7
+  start.setDate(start.getDate() - diff)
+  return start
+}
+
+const sumAmounts = (donations: DonationRecord[]) =>
+  donations.reduce((sum, donation) => sum + Number(donation.amount || 0), 0)
+
+const calculateDonationStats = (donations: DonationRecord[]) => {
+  if (!donations || donations.length === 0) {
+    return { ...defaultDonationStats }
+  }
+
+  const now = new Date()
+  const startToday = getStartOfDay(now)
+  const startWeek = getStartOfWeek(now)
+
+  const todayDonations = donations.filter((donation) => new Date(donation.created_at) >= startToday)
+  const weekDonations = donations.filter((donation) => new Date(donation.created_at) >= startWeek)
+
+  const totalAmount = sumAmounts(donations)
+
+  return {
+    total: totalAmount,
+    thisWeek: sumAmounts(weekDonations),
+    thisWeekCount: weekDonations.length,
+    today: sumAmounts(todayDonations),
+    todayCount: todayDonations.length,
+    average: donations.length ? totalAmount / donations.length : 0,
+  }
+}
+
+const buildChartData = (donations: DonationRecord[], filter: string): ChartPoint[] => {
+  const entries = donations || []
+  const now = getStartOfDay(new Date())
+
+  switch (filter) {
+    case "day":
+      return buildDailyData(entries, now, 7)
+    case "month":
+      return buildMonthlyData(entries, now, 6)
+    case "year":
+      return buildYearlyData(entries, now, 5)
+    case "week":
+    default:
+      return buildWeeklyData(entries, now, 8)
+  }
+}
+
+const buildDailyData = (donations: DonationRecord[], reference: Date, days: number): ChartPoint[] => {
+  const data: ChartPoint[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const day = new Date(reference)
+    day.setDate(reference.getDate() - i)
+    const total = donations.reduce((sum, donation) => {
+      const donationDate = new Date(donation.created_at)
+      return donationDate.toDateString() === day.toDateString() ? sum + Number(donation.amount || 0) : sum
+    }, 0)
+    data.push({
+      period: day.toLocaleDateString("fr-FR", { weekday: "short" }),
+      montant: total,
+    })
+  }
+  return data
+}
+
+const buildWeeklyData = (donations: DonationRecord[], reference: Date, weeks: number): ChartPoint[] => {
+  const startCurrentWeek = getStartOfWeek(reference)
+  const data: ChartPoint[] = []
+  for (let i = weeks - 1; i >= 0; i--) {
+    const start = new Date(startCurrentWeek)
+    start.setDate(startCurrentWeek.getDate() - i * 7)
+    const end = new Date(start)
+    end.setDate(start.getDate() + 7)
+    const total = donations.reduce((sum, donation) => {
+      const created = new Date(donation.created_at)
+      return created >= start && created < end ? sum + Number(donation.amount || 0) : sum
+    }, 0)
+    data.push({
+      period: `${start.toLocaleDateString("fr-FR", { month: "short", day: "numeric" })}`,
+      montant: total,
+    })
+  }
+  return data
+}
+
+const buildMonthlyData = (donations: DonationRecord[], reference: Date, months: number): ChartPoint[] => {
+  const data: ChartPoint[] = []
+  for (let i = months - 1; i >= 0; i--) {
+    const start = new Date(reference.getFullYear(), reference.getMonth() - i, 1)
+    const end = new Date(start.getFullYear(), start.getMonth() + 1, 1)
+    const total = donations.reduce((sum, donation) => {
+      const created = new Date(donation.created_at)
+      return created >= start && created < end ? sum + Number(donation.amount || 0) : sum
+    }, 0)
+    data.push({
+      period: start.toLocaleDateString("fr-FR", { month: "short" }),
+      montant: total,
+    })
+  }
+  return data
+}
+
+const buildYearlyData = (donations: DonationRecord[], reference: Date, years: number): ChartPoint[] => {
+  const data: ChartPoint[] = []
+  for (let i = years - 1; i >= 0; i--) {
+    const startYear = reference.getFullYear() - i
+    const start = new Date(startYear, 0, 1)
+    const end = new Date(startYear + 1, 0, 1)
+    const total = donations.reduce((sum, donation) => {
+      const created = new Date(donation.created_at)
+      return created >= start && created < end ? sum + Number(donation.amount || 0) : sum
+    }, 0)
+    data.push({
+      period: `${startYear}`,
+      montant: total,
+    })
+  }
+  return data
+}
 
 export default function DonPage() {
   const { toast } = useToast()
@@ -69,6 +184,11 @@ export default function DonPage() {
   const [campaigns, setCampaigns] = useState<any[]>([])
   const [campaignsLoading, setCampaignsLoading] = useState(true)
   const [loading, setLoading] = useState(false)
+  const [donationsLoading, setDonationsLoading] = useState(true)
+  const [donationsData, setDonationsData] = useState<DonationRecord[]>([])
+  const [donationsChartData, setDonationsChartData] = useState<ChartPoint[]>([])
+  const [donationStats, setDonationStats] = useState(defaultDonationStats)
+  const [recentDonations, setRecentDonations] = useState<DonationRecord[]>([])
 
   // Charger les campagnes depuis l'API
   const loadCampaigns = async () => {
@@ -114,6 +234,71 @@ export default function DonPage() {
     loadCampaigns()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const loadDonationsData = useCallback(async () => {
+    try {
+      setDonationsLoading(true)
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from("donations")
+        .select("id, donor_email, donor_first_name, amount, payment_status, created_at")
+        .order("created_at", { ascending: false })
+        .limit(200)
+
+      if (error) {
+        throw error
+      }
+
+      const completed: DonationRecord[] =
+        (data || [])
+          .filter((item: any) => item.payment_status === "completed")
+          .map((item: any) => ({
+            id: item.id,
+            amount: Number(item.amount) || 0,
+            donor_email: item.donor_email,
+            donor_first_name: item.donor_first_name,
+            created_at: item.created_at,
+          }))
+
+      setDonationsData(completed)
+      setRecentDonations(completed.slice(0, 5))
+      setDonationStats(calculateDonationStats(completed))
+    } catch (error) {
+      console.error("Erreur lors du chargement des dons:", error)
+      setDonationsData([])
+      setRecentDonations([])
+      setDonationStats({ ...defaultDonationStats })
+    } finally {
+      setDonationsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadDonationsData()
+    const supabase = createClient()
+    const channel = supabase
+      .channel("admin-donations-tracking")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "donations",
+        },
+        () => {
+          loadDonationsData()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [loadDonationsData])
+
+  useEffect(() => {
+    setDonationsChartData(buildChartData(donationsData, timeFilter))
+  }, [donationsData, timeFilter])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
@@ -278,12 +463,6 @@ export default function DonPage() {
     }
   }
 
-  // Charger les campagnes au montage du composant
-  useEffect(() => {
-    loadCampaigns()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   return (
     <AdminLayoutWrapper title="Gestion des Dons">
       <div className="space-y-6">
@@ -292,34 +471,48 @@ export default function DonPage() {
           <Card className="animate-fadeInUp">
             <CardHeader className="pb-3">
               <CardDescription>Total Collecté</CardDescription>
-              <CardTitle className="text-3xl font-bold text-red-600">21,500€</CardTitle>
+              <CardTitle className="text-3xl font-bold text-red-600">
+                {donationsLoading ? "—" : formatCurrency(donationStats.total)}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-green-600">+12.5% ce mois</p>
+              <p className="text-sm text-gray-600">
+                {donationsLoading ? "Chargement des dons..." : `${donationsData.length} dons confirmés`}
+              </p>
             </CardContent>
           </Card>
           <Card className="animate-fadeInUp" style={{ animationDelay: "0.1s" }}>
             <CardHeader className="pb-3">
               <CardDescription>Cette Semaine</CardDescription>
-              <CardTitle className="text-3xl font-bold">5,470€</CardTitle>
+              <CardTitle className="text-3xl font-bold">
+                {donationsLoading ? "—" : formatCurrency(donationStats.thisWeek)}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600">142 dons</p>
+              <p className="text-sm text-gray-600">
+                {donationsLoading ? "" : `${donationStats.thisWeekCount} dons`}
+              </p>
             </CardContent>
           </Card>
           <Card className="animate-fadeInUp" style={{ animationDelay: "0.2s" }}>
             <CardHeader className="pb-3">
               <CardDescription>Aujourd'hui</CardDescription>
-              <CardTitle className="text-3xl font-bold">1,230€</CardTitle>
+              <CardTitle className="text-3xl font-bold">
+                {donationsLoading ? "—" : formatCurrency(donationStats.today)}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600">23 dons</p>
+              <p className="text-sm text-gray-600">
+                {donationsLoading ? "" : `${donationStats.todayCount} dons`}
+              </p>
             </CardContent>
           </Card>
           <Card className="animate-fadeInUp" style={{ animationDelay: "0.3s" }}>
             <CardHeader className="pb-3">
               <CardDescription>Don Moyen</CardDescription>
-              <CardTitle className="text-3xl font-bold">53€</CardTitle>
+              <CardTitle className="text-3xl font-bold">
+                {donationsLoading ? "—" : formatCurrency(donationStats.average)}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600">Par donateur</p>
@@ -349,15 +542,23 @@ export default function DonPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={donationsStats}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="period" stroke="#888" />
-                <YAxis stroke="#888" />
-                <Tooltip />
-                <Line type="monotone" dataKey="montant" stroke="#dc2626" strokeWidth={3} />
-              </LineChart>
-            </ResponsiveContainer>
+            {donationsLoading && donationsChartData.length === 0 ? (
+              <div className="flex items-center justify-center py-10">
+                <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : donationsChartData.length === 0 ? (
+              <p className="text-center text-sm text-gray-500 py-10">Aucune donnée disponible pour cette période.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={donationsChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="period" stroke="#888" />
+                  <YAxis stroke="#888" />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="montant" stroke="#dc2626" strokeWidth={3} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -368,25 +569,40 @@ export default function DonPage() {
             <CardDescription>Liste des derniers dons effectués</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {recentDonations.map((donation) => (
-                <div
-                  key={donation.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-red-300 transition-colors"
-                >
-                  <div>
-                    <p className="font-semibold text-gray-900">{donation.donor}</p>
-                    <p className="text-sm text-gray-600">{donation.email}</p>
-                    <p className="text-xs text-gray-500">
-                      {donation.date} à {donation.time}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-red-600">{donation.amount}€</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {donationsLoading && recentDonations.length === 0 ? (
+              <div className="flex items-center justify-center py-6">
+                <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : recentDonations.length === 0 ? (
+              <p className="text-center text-sm text-gray-500 py-4">Aucun don n'a encore été enregistré.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentDonations.map((donation) => {
+                  const donationDate = new Date(donation.created_at)
+                  const donorName = donation.donor_first_name || "Donateur anonyme"
+                  const donorEmail = donation.donor_email || "Email non renseigné"
+
+                  return (
+                    <div
+                      key={donation.id}
+                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-red-300 transition-colors"
+                    >
+                      <div>
+                        <p className="font-semibold text-gray-900">{donorName}</p>
+                        <p className="text-sm text-gray-600">{donorEmail}</p>
+                        <p className="text-xs text-gray-500">
+                          {donationDate.toLocaleDateString("fr-FR")} à{" "}
+                          {donationDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-red-600">{formatCurrency(donation.amount)}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 

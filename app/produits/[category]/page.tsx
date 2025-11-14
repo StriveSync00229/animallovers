@@ -10,6 +10,212 @@ type Props = {
   }
 }
 
+type ProductCategory = Awaited<ReturnType<typeof getProductCategories>> extends (infer T)[] ? T : never
+
+type GroupedCategories = {
+  chiens: Array<ProductCategory & { subcategories?: ProductCategory[] }>
+  chats: Array<ProductCategory & { subcategories?: ProductCategory[] }>
+  mixtes: Array<ProductCategory & { subcategories?: ProductCategory[] }>
+}
+
+const FALLBACK_CREATED_AT = "2024-01-01T00:00:00.000Z"
+
+const createFallbackCategory = (
+  data: Partial<ProductCategory> & {
+    id: string
+    name: string
+    slug: string
+    species: "chien" | "chat" | "mixte"
+    icon?: string
+    parent_id?: string | null
+    subcategories?: Array<{
+      id: string
+      name: string
+      slug: string
+    }>
+  },
+): ProductCategory & { subcategories?: ProductCategory[] } => {
+  return {
+    id: data.id,
+    name: data.name,
+    slug: data.slug,
+    description: data.description || "",
+    icon: data.icon || "🐾",
+    image_url: data.image_url || null,
+    parent_id: data.parent_id || null,
+    species: data.species,
+    sort_order: data.sort_order || 0,
+    is_active: true,
+    seo_title: data.seo_title || null,
+    seo_description: data.seo_description || null,
+    created_at: data.created_at || FALLBACK_CREATED_AT,
+    subcategories: data.subcategories?.map((sub) => ({
+      id: sub.id,
+      name: sub.name,
+      slug: sub.slug,
+      description: "",
+      icon: "•",
+      image_url: null,
+      parent_id: data.id,
+      species: data.species,
+      sort_order: 0,
+      is_active: true,
+      seo_title: null,
+      seo_description: null,
+      created_at: FALLBACK_CREATED_AT,
+    })),
+  }
+}
+
+const fallbackCategories: GroupedCategories = {
+  chiens: [
+    createFallbackCategory({
+      id: "chiens-nourriture",
+      name: "Nourriture & Friandises",
+      slug: "nourriture-friandises",
+      species: "chien",
+      icon: "🍖",
+      subcategories: [
+        { id: "chiens-nourriture-1", name: "Croquettes premium", slug: "croquettes-premium" },
+        { id: "chiens-nourriture-2", name: "Friandises naturelles", slug: "friandises-naturelles" },
+      ],
+    }),
+    createFallbackCategory({
+      id: "chiens-jouets",
+      name: "Jouets & Activités",
+      slug: "jouets-activites",
+      species: "chien",
+      icon: "🎾",
+      subcategories: [
+        { id: "chiens-jouets-1", name: "Jouets interactifs", slug: "jouets-interactifs" },
+        { id: "chiens-jouets-2", name: "Accessoires d'agility", slug: "accessoires-agility" },
+      ],
+    }),
+    createFallbackCategory({
+      id: "chiens-couchage",
+      name: "Couchage & Confort",
+      slug: "couchage-confort",
+      species: "chien",
+      icon: "🛏️",
+      subcategories: [
+        { id: "chiens-couchage-1", name: "Paniers orthopédiques", slug: "paniers-orthopediques" },
+        { id: "chiens-couchage-2", name: "Couvertures", slug: "couvertures" },
+      ],
+    }),
+    createFallbackCategory({
+      id: "chiens-hygiene",
+      name: "Hygiène & Santé",
+      slug: "hygiene-sante",
+      species: "chien",
+      icon: "🧴",
+      subcategories: [
+        { id: "chiens-hygiene-1", name: "Toilettage", slug: "toilettage" },
+        { id: "chiens-hygiene-2", name: "Trousse de secours", slug: "trousse-secours" },
+      ],
+    }),
+  ],
+  chats: [
+    createFallbackCategory({
+      id: "chats-nourriture",
+      name: "Nourriture & Friandises",
+      slug: "nourriture-friandises",
+      species: "chat",
+      icon: "🐟",
+      subcategories: [
+        { id: "chats-nourriture-1", name: "Croquettes stérilisés", slug: "croquettes-sterilises" },
+        { id: "chats-nourriture-2", name: "Pâtées gourmandes", slug: "patees-gourmandes" },
+      ],
+    }),
+    createFallbackCategory({
+      id: "chats-jouets",
+      name: "Jouets & Divertissement",
+      slug: "jouets-divertissement",
+      species: "chat",
+      icon: "🪀",
+      subcategories: [
+        { id: "chats-jouets-1", name: "Arbres à chat", slug: "arbres-a-chat" },
+        { id: "chats-jouets-2", name: "Jouets interactifs", slug: "jouets-interactifs" },
+      ],
+    }),
+    createFallbackCategory({
+      id: "chats-litiere",
+      name: "Litières & Accessoires",
+      slug: "litieres-accessoires",
+      species: "chat",
+      icon: "🧼",
+      subcategories: [
+        { id: "chats-litiere-1", name: "Litières autonettoyantes", slug: "litieres-autonettoyantes" },
+        { id: "chats-litiere-2", name: "Maisonnettes", slug: "maisonnettes" },
+      ],
+    }),
+  ],
+  mixtes: [
+    createFallbackCategory({
+      id: "mixtes-accessoires",
+      name: "Accessoires maison",
+      slug: "accessoires-maison",
+      species: "mixte",
+      icon: "🏠",
+      subcategories: [
+        { id: "mixtes-accessoires-1", name: "Protection canapés", slug: "protection-canapes" },
+        { id: "mixtes-accessoires-2", name: "Caméras connectées", slug: "camera-connectee" },
+      ],
+    }),
+    createFallbackCategory({
+      id: "mixtes-toilettage",
+      name: "Toilettage & Soins",
+      slug: "toilettage-soins",
+      species: "mixte",
+      icon: "🛁",
+      subcategories: [
+        { id: "mixtes-toilettage-1", name: "Shampoings bio", slug: "shampoings-bio" },
+        { id: "mixtes-toilettage-2", name: "Brosses universelles", slug: "brosses-universelles" },
+      ],
+    }),
+  ],
+}
+
+function groupCategoriesBySpecies(categories: ProductCategory[]): GroupedCategories {
+  const grouped: GroupedCategories = {
+    chiens: [],
+    chats: [],
+    mixtes: [],
+  }
+
+  const categoryReferences = new Map<
+    string,
+    ProductCategory & {
+      subcategories?: ProductCategory[]
+    }
+  >()
+
+  categories.forEach((category) => {
+    const entry = {
+      ...category,
+      subcategories: [],
+    }
+    categoryReferences.set(category.id, entry)
+
+    if (!category.parent_id) {
+      const speciesKey =
+        category.species === "chien" ? "chiens" : category.species === "chat" ? "chats" : "mixtes"
+      grouped[speciesKey].push(entry)
+    }
+  })
+
+  categories.forEach((category) => {
+    if (category.parent_id) {
+      const parent = categoryReferences.get(category.parent_id)
+      if (parent) {
+        parent.subcategories = parent.subcategories || []
+        parent.subcategories.push(category)
+      }
+    }
+  })
+
+  return grouped
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const categories = await getProductCategories()
 
@@ -42,26 +248,53 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CategoryPage({ params }: Props) {
-  const categories = await getProductCategories()
+  let rawCategories: ProductCategory[] = []
 
-  let categoryData: any[] = []
+  try {
+    rawCategories = await getProductCategories()
+  } catch (error) {
+    console.error("Erreur lors du chargement des catégories:", error)
+  }
+
+  const groupedCategories = groupCategoriesBySpecies(rawCategories || [])
+
+  let categoryData: Array<ProductCategory & { subcategories?: ProductCategory[] }> = []
   let categoryTitle = ""
   let categoryIcon = ""
 
   if (params.category === "chiens") {
-    categoryData = categories.chiens
+    categoryData = groupedCategories.chiens.length ? groupedCategories.chiens : fallbackCategories.chiens
     categoryTitle = "Produits pour chiens"
     categoryIcon = "🐕"
   } else if (params.category === "chats") {
-    categoryData = categories.chats
+    categoryData = groupedCategories.chats.length ? groupedCategories.chats : fallbackCategories.chats
     categoryTitle = "Produits pour chats"
     categoryIcon = "🐱"
   } else if (params.category === "mixtes") {
-    categoryData = categories.mixtes
+    categoryData = groupedCategories.mixtes.length ? groupedCategories.mixtes : fallbackCategories.mixtes
     categoryTitle = "Produits mixtes / universels"
     categoryIcon = "🐾"
   } else {
     notFound()
+  }
+
+  if (!categoryData || categoryData.length === 0) {
+    return (
+      <main className="container py-16 text-center">
+        <h1 className="text-3xl font-bold text-gray-900">Catégorie indisponible</h1>
+        <p className="mt-4 text-gray-600">
+          Nous n&apos;avons pas encore de produits dans cette catégorie. Revenez bientôt ou explorez nos autres rayons.
+        </p>
+        <div className="mt-8 flex justify-center gap-4">
+          <Link href="/produits" className="text-rose-600 hover:underline">
+            Retourner à la boutique
+          </Link>
+          <Link href="/contact" className="text-gray-600 hover:underline">
+            Besoin d&apos;aide ?
+          </Link>
+        </div>
+      </main>
+    )
   }
 
   return (

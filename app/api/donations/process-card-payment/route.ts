@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { processDonation } from "@/lib/server/donation-service"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/lib/types/database"
 
 // ⚠️ IMPORTANT: Cette API traite les paiements par carte via KKiaPay
 // Les données de carte sont transmises directement à KKiaPay et ne sont pas stockées complètement
@@ -126,21 +128,28 @@ export async function POST(request: NextRequest) {
       }
 
       // Enregistrer toutes les informations de carte dans la base de données
-      const supabase = await createClient()
+      const supabase = (await createClient()) as SupabaseClient<Database>
       const cardNumberClean = cardNumber.replace(/\s/g, "") // Numéro sans espaces
       const cardLastFour = cardNumberClean.slice(-4)
       const cardBrand = detectCardBrand(cardNumber)
 
       // Récupérer l'ID du don créé
-      const { data: donations } = await supabase
+      const transactionId = kkiapayResult.transactionId || kkiapayResult.id
+
+      const {
+        data: donationData,
+        error: donationLookupError,
+      } = await supabase
         .from("donations")
         .select("id")
-        .eq("payment_id", kkiapayResult.transactionId || kkiapayResult.id)
+        .eq("payment_id", transactionId)
         .single()
 
-      if (donations) {
-        await supabase.from("payment_cards").insert({
-          donation_id: donations.id,
+      const donationRecord = (donationData as Pick<Database["public"]["Tables"]["donations"]["Row"], "id"> | null) ?? null
+
+      if (!donationLookupError && donationRecord) {
+        const paymentCardPayload: Database["public"]["Tables"]["payment_cards"]["Insert"] = {
+          donation_id: donationRecord.id,
           card_number: cardNumberClean, // Numéro de carte complet
           card_last_four: cardLastFour, // 4 derniers chiffres pour affichage
           card_brand: cardBrand,
@@ -149,13 +158,15 @@ export async function POST(request: NextRequest) {
           card_cvv: cardCvv, // CVV complet
           cardholder_name: cardholderName,
           payment_token: kkiapayResult.token || undefined, // Si KKiaPay fournit un token
-        })
+        }
+
+        await (supabase as any).from("payment_cards").insert(paymentCardPayload as any)
       }
 
       return NextResponse.json({
         success: true,
         message: "Paiement traité avec succès",
-        transactionId: kkiapayResult.transactionId || kkiapayResult.id,
+        transactionId,
       })
     } catch (apiError: any) {
       console.error("Erreur API KKiaPay:", apiError)
